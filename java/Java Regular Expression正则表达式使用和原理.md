@@ -4,7 +4,6 @@ https://en.wikipedia.org/wiki/Regular_expression
 
 # what 正则表达式能做什么？
 
-
 ## case1 验证
 public class Demo {
 

@@ -4,6 +4,7 @@
 * CPU乱序执行 Out-of-Order-Execution
 * 虚拟机即时编译时的指令重排 Instruction-Reordering
 
+
 # Java 内存模型概念
 
 ## Why 为什么要定义内存模型？
