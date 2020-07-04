@@ -1,6 +1,7 @@
 https://docs.oracle.com/javase/8/docs/api/java/util/stream/package-summary.html
 
 
+
 了解概念
 - Stream 流
 - Pipepline, Stage 管道 ，阶段
@@ -13,6 +14,148 @@ https://docs.oracle.com/javase/8/docs/api/java/util/stream/package-summary.html
 - 不变性（确定性）：基于不变性可以做很多性能提升。
 - 延迟处理：Laziness延迟处理的设计，先组装操作，有了足够的信息，带来性能优化：操作融合(fuse)一次搞定，短路。
 - 细分抽象：区分有状态操作 VS 无状态的操作 区别对待，有状态操作需要“瞻前顾后”维护缓存（临时集合），无状态操作“简单安全”。
+
+
+
+# Stream operations and pipelines
+流操作总体分为2类
+- 中间型操作 intermediate 都是lazy模式
+     - stateless
+     - stateful
+- 终止型操作 terminal: 大部分是eager模式，但是提供了“逃逸舱escape-hatch”iterator() and spliterator()。该stream被消费后，不可再次使用。
+
+lazy efficiencies
+short-circuiting: 有些操作是短路的，比如any/first.
+behavioral parameters: 行为参数，特指流操作中访问到的变量，包括lambda入参和方法体中访问的外部变量。
+
+# Parallelism
+默认的stream是顺序执行的，除非显示用parallelStream()/parrallel()转换。
+为了保证并行执行的正确性，(lambda表达式或者方法引用的)行为参数必须互不干扰(Non-interference)，大部分情况下也必须保证无状态性(stateless).
+
+# Non-interference
+想要确保Non-interference，（大部分情况下）意味着不能在<u>执行流管道的时候</u>改数据源，除非数据源本身就被设计为可并发修改。
+并发数据源就是那些报告characteristic中有CONCURRENT标志的spliterator。
+相应地，流管道中的行为参数（操作）决不能修改非并发的数据源。
+
+# Stateless behaviors
+如果流操作的行为参数是有状态的（依赖的状态可能在执行期间变化），那么流管道执行的结果可能是不确定的，甚至不正确，例如：
+```java
+     Set<Integer> seen = Collections.synchronizedSet(new HashSet<>());
+     stream.parallel().map(e -> { if (seen.add(e)) return 0; else return e; }) //...
+```
+这里的map操作依赖了外部的一个seen，执行期间这个seen又会变化。
+对于相同的输入，每次执行后，那么由于线程调度的不同，结果很可能不同，而无状态的操作的结果是相同的。
+
+
+# Side-effects
+总的来讲，stream的设计不鼓励对流操作的行为参数产生副作用(Side-effects)，因为这通常会破坏无状态的规约，并破坏线程安全。
+
+* 少部分流操作只能通过产生副作用的方式操作，比如foreach, peek，你应该小心使用它们。
+* 有时候能你将有副作用的操作--(转换为)-->无副作用，例如，用reduction代替可变收集器（mutable accumulators）
+
+```java
+     ArrayList<String> results = new ArrayList<>();
+     stream.filter(s -> pattern.matcher(s).matches())
+           .forEach(s -> results.add(s));  // Unnecessary use of side-effects!
+```
+
+无副作用版本：
+```java
+     List<String>results =
+         stream.filter(s -> pattern.matcher(s).matches())
+               .collect(Collectors.toList());  // No side-effects!
+```
+
+# Ordering
+ecounter order: 有些流是有顺序的，称为ecounter order
+流有没有顺序要看源数据和中间操作：
+- 某些流源数据天然就是顺序的（比如List和数组），某些则不是（例如HashSet）。
+- 某些中间操作（例如sorted）会施加顺序，有些则会去除顺序（unordered)。
+- 此外，一些终止操作会忽略顺序，例如foreach
+
+性能和确定性影响：
+- 对顺序流来说，有没有encounter order只影响结果的确定性，不影响性能。
+- 对并行流来说，放开顺序约束有时候会带来很多性能提升。
+- 如果元素顺序无关，那么类似ditinct, group 等聚合操作可以更高效地实现。
+- 类似的，类似limit这种操作天然就和顺序绑在一起， 且要利用并行，就要用一个缓存来实现。
+- 有时候用户不关心顺序，但是流是有顺序的，那么显示地用unordered，可能会提升有状态的操作或者终止操作的并行效率。
+- 有些类似sum的操作，不管有没有顺序都能高效地并行处理。
+
+# Reduction operations
+我们将多个输入元素合并为一个元素，称为reduce操作。
+包括reduce(), collect(), sum(), max(), count()等
+只要操作符合结合律(associative)且无状态，就能完全利用并行的处理优势。
+
+
+
+
+# Mutable reduction
+可变reduction操作之所以称为收集collect()，是因为它把结果收集到一个可变(mutable)结果容器中，类似Collection, StringBuilder。
+
+```java
+     String concatenated = strings.reduce("", String::concat)
+```
+上面这么合并字符串非常耗性能，内部的实现会多次copy字符串，运行时间将会是字符数的O(n^2)。
+更加高效的办法是收集到StringBuilder中。
+
+collect收集操作需要3个函数：
+- supplier 提供容器
+- accumulator 将元素收集到容器中
+- combiner 将一个结果容器的元素合并到另外一个容器（拆分后的合并要用）
+
+```java
+ <R> R collect(Supplier<R> supplier,
+               BiConsumer<R, ? super T> accumulator,
+               BiConsumer<R, R> combiner);
+```
+通过collect操作，我们可以将下面这个foreach的操作：
+```JAVA
+     ArrayList<String> strings = new ArrayList<>();
+     for (T element : stream) {
+         strings.add(element.toString());
+     }
+```
+转换为：
+```JAVA
+     List<String> strings = stream.map(Object::toString)
+                                  .collect(ArrayList::new, ArrayList::add,ArrayList::addAll);
+```
+进一步简化为：
+```java
+     List<String> strings = stream.map(Object::toString)
+                                  .collect(Collectors.toList());
+```
+
+将可变收集操作打包到Collector中会带来另外一个好处：可组合性。
+相对于reduction操作来说，collect操作只能在某些情况下能够并行。
+
+
+
+# Reduction, concurrency, and ordering
+
+- 性能降低
+对一些复杂的reduction操作来说，使用并行反而会降低性能，比如用collector生成Map：
+```java
+     Map<Buyer, List<Transaction>> salesByBuyer
+         = txns.parallelStream()
+               .collect(Collectors.groupingBy(Transaction::getBuyer));
+```
+要知道，对于某些Map的实现来说，合并Map是非常昂贵的操作。
+
+- 性能提升：concurrent reduction
+而对于一个可修改的结果容器，比如ConcurrentHashMap，并行执行accumulator将把结果并行存入同一个共享的容器，
+这样就combiner就不必合并结果了。这会加速并行执行的性能，我们把这叫做concurent reduction.
+
+一个Collector如果支持concurrent reduction会被标记为 Collector.Characteristics.CONCURRENT
+然而它也有不好的地方：多线程并发写入一个共享容器时，结果是不确定的。
+Stream.collect(Collector)只会在如下条件满足时执行concurrent reduction：
+- stream是并行的
+- Collector有Collector.Characteristics.CONCURRENT标志
+- stream是无序的，或者Collector有Collector.Characteristics.UNORDERED标志
+
+# Associativity 结合律
+满足结合律对并行执行非常重要
+(a op b) op c == a op (b op c)
 
 
 # Sink Pipeline的设计
@@ -32,7 +175,6 @@ Sink
 ## LongPipeline、 ReferencePipeline举例
 
 # Collector的设计
-
 
 
 
