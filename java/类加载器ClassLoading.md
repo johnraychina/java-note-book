@@ -1,6 +1,5 @@
 
 # SpringBoot 怎么启动和做类加载
-https://www.atatech.org/articles/45367
 
 ## spring boot应用打包：
 spring boot maven插件生成fat jar包，里面包含：
@@ -52,63 +51,6 @@ Fat jar的启动Main函数是JarLauncher，它负责创建一个LaunchedURLClass
     从bizClassLoader 里查找到所有的pandora plugin jar。 
     从sar包里查找lib目录下的jar，并构造 PandoraContainer调用ModuleClassLoader。
     再返回 exportedClasses 缓存。
-
-
-# ClassLoader类加载器与SecurityManager
-
-
-# endorsed standards override feature for Java <= 8 
-
-# and the upgradeable modules feature for Java 9+.
-
-# 一个类是何时会被加载？
-当运行中需要这个类的时候：
-- 执行时引用： 遇到new, getstatic, putstatic等指令时
-- 对类进行反射调用
-- 初始化某个子类时
-- main方法的启动类
-- 使用jdk1.7 动态语言支持的时候
-
-# 一个类是如何被加载进来的？
-ClassLoader loadClass，加载，解析，验证，注册到 Dictionary
-
-一个class被加载后，他的唯一标志符为 full class name + classloader
-
-## 双亲委派机制
-默认情况下
-
-
-## 打破双亲委派的几个场景
-JavaEE 容器 
-
-SPI类加载
-
-OSGI 导入导出类
-
-# Class unloading卸载
-在网上搜索 Perm OOM问题，Groovy OOM，你就会发现有许多类加载和卸载的问题。
-
-平常我们不会关心类的卸载，尤其是java8之后默认用MetaSpace（堆外存储，仅受实际内存限制）。
-
-可一旦你遇到动态加载类的情况时，事情就变得复杂起来，你就不得不考虑类是如何卸载的。
-
-## 执行class unloading
-时机：看jdk版本和设置，在PermSpace或者MetaSpace空间不够时触发FullGC时
-
-范围：当GC Roots不可达时才可能被GC掉：即class的instance和class本身没有被引用时 。
-
-https://www.dynatrace.com/resources/ebooks/javabook/how-garbage-collection-works/
-
-那么什么是GC Roots呢？ 可从堆外（non-heap）引用的对象：
-
-- 活动的线程 Active Java threads are always considered live objects and are therefore GC roots. 
-
-- 线程本地变量 Local variables are kept alive by the stack of a thread.
-
-- 类静态变量 Static variables are referenced by their classes.
-
-- JNI本地方法引用 JNI References
-
 
 
 # Tomcat ClassLoading 类加载
@@ -171,6 +113,64 @@ Server  Shared
 
 
 
+
+
+# SecurityManager 与类加载
+
+# endorsed standards override feature for Java <= 8 
+
+# and the upgradeable modules feature for Java 9+.
+
+# 一个类是何时会被加载？
+当运行中需要这个类的时候：
+- 执行时引用： 遇到new, getstatic, putstatic等指令时
+- 对类进行反射调用
+- 初始化某个子类时
+- main方法的启动类
+- 使用jdk1.7 动态语言支持的时候
+
+# 一个类是如何被加载进来的？
+ClassLoader loadClass，加载，解析，验证，注册到 Dictionary
+
+一个class被加载后，他的唯一标志符为 full class name + classloader
+
+## 双亲委派机制
+Bootstrap ClassLoader(JRE/lib)
+      |
+ExtClassLoader(JRE/lib/ext)
+      |
+SystemClassLoader(应用类加载器)
+
+## 打破双亲委派的几个场景
+JavaEE 容器 
+
+SPI类加载
+
+OSGI 导入导出类
+
+# Class unloading卸载
+在网上搜索 Perm OOM问题，Groovy OOM，你就会发现有许多类加载和卸载的问题。
+
+平常我们不会关心类的卸载，尤其是java8之后默认用MetaSpace（堆外存储，仅受实际内存限制）。
+
+可一旦你遇到动态加载类的情况时，事情就变得复杂起来，你就不得不考虑类是如何卸载的。
+
+## 执行class unloading
+时机：看jdk版本和设置，在PermSpace或者MetaSpace空间不够时触发FullGC时
+
+范围：当GC Roots不可达时才可能被GC掉：即class的instance和class本身没有被引用时 。
+
+https://www.dynatrace.com/resources/ebooks/javabook/how-garbage-collection-works/
+
+那么什么是GC Roots呢？ 可从堆外（non-heap）引用的对象：
+
+- 活动的线程 Active Java threads are always considered live objects and are therefore GC roots. 
+
+- 线程本地变量 Local variables are kept alive by the stack of a thread.
+
+- 类静态变量 Static variables are referenced by their classes.
+
+- JNI本地方法引用 JNI References
 
 
 

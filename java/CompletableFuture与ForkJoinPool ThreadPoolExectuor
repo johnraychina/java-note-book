@@ -1,0 +1,27 @@
+
+
+ForkJoinPool 
+common 默认是 defaultForkJoinWorkerThreadFactory
+
+parallelism并行程度：
+	默认是cpu核数减1, Runtime.getRuntime().availableProcessors() - 1
+	可以通过这个系统属性定制：System.getProperty("java.util.concurrent.ForkJoinPool.common.parallelism");
+
+workQueues默认按并行度通过位移算出来parallelism(7)=>(16)
+keepAlive默认是60_000ms
+bounds默认按parallelism(7)=>(16842746)
+
+
+
+CompletableFuture
+join怎么实现的？
+-> waitingGet -> while ((r = result) == null) { tryPushStack -> STACK.compareAndSet  }
+->reportJoin封装结果
+
+
+ThreadPoolExecutor
+
+
+UncaughtExceptionHandler 如果没有处理异常，会发生什么事情呢？走到ThreadGroup处理
+
+	
