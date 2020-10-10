@@ -1,6 +1,16 @@
 
 
 
+## 核心类
+SpringApplication
+ApplicationContext 
+--ConfigurableApplicationContext
+	--AnnotationConfigEmbeddedWebApplicationContext web环境
+	--AnnotationConfigApplicationContext 普通环境
+	
+BeanWrapperImpl 设置属性，注入
+DefaultListableBeanFactory
+
 
 # Bean依赖注入
 

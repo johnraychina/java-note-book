@@ -1,0 +1,19 @@
+
+2020-09-15 Oracle 官方宣布Java 15 发布
+https://www.oracle.com/news/announcement/oracle-announces-java-15-091520.html
+
+## Java 15 新特性概览
+- 开发效率 和安全性提升：
+    - Edwards-Curve Digital Signature Algorithm 爱德华曲线 数字加密算法
+    - Hidden Classes 隐藏类
+- 文本块 和ZGC垃圾回收 完善发布
+- 密封类（Sealed Classes）预览版
+- 支持instanceof模式识别
+- 记录Records 作为第二个预览版本，待开发者体验和反馈。
+
+## 详细介绍
+
+### 新功能
+    JEP 339: Edwards-Curve Digital Signature Algorithm (EdDSA) 
+    通过实现了爱德华曲线数字加密算法，提升java加密的安全和性能。
+    https://en.wikipedia.org/wiki/EdDSA
