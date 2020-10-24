@@ -178,5 +178,13 @@ mainLock 锁的用处，为了控制对workers工作线程集合的访问和book
 
 3、业务的要求：吞吐量优先 or 及时响应优先
 4、在队列中等待处太久，会不会导致大量超时重试？
-5、
 
+
+## 延时执行
+ScheduledThreadPoolExecutor
+DelayedWorkQueue + Leader-Follower pattern (http://www.cs.wustl.edu/~schmidt/POSA/POSA2/) serves to minimize unnecessary timed waiting. 
+
+## 工作窃取
+ForkJoinPool
+
+## VarHandle
