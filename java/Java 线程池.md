@@ -184,7 +184,40 @@ mainLock 锁的用处，为了控制对workers工作线程集合的访问和book
 ScheduledThreadPoolExecutor
 DelayedWorkQueue + Leader-Follower pattern (http://www.cs.wustl.edu/~schmidt/POSA/POSA2/) serves to minimize unnecessary timed waiting. 
 
-## 工作窃取
-ForkJoinPool
+## ForkJoinPool
+http://gee.cs.oswego.edu/dl/papers/fj.pdf
+ForkJoinPool + ForkJoinWorkerThread
+• Worker threads process their own deques in LIFO(youngest−first) order, by popping tasks.
+• When a worker thread has no local tasks to run, it attemptsto take ("steal") a task from another randomly chosenworker, using a FIFO (oldest first) rule. 
+
+### 分析ForkJoinPool
+ForkJoinPool几个重要的参数：
+
+commonParallelism 并行度
+
+commonMaxSpares
+
+// Instance fields
+volatile long ctl;                   // main pool control
+volatile int runState;               // lockable status
+final int config;                    // parallelism, mode
+int indexSeed;                       // to generate worker index
+volatile WorkQueue[] workQueues;     // main registry
+final ForkJoinWorkerThreadFactory factory;
+final UncaughtExceptionHandler ueh;  // per-worker UEH
+final String workerNamePrefix;       // to create worker name string
+volatile AtomicLong stealCounter;    // also used as sync monitor
+
+
+### 分析ForkJoinThread
+与普通的线程不同，ForkJoinThread内部维护了自己的task queue
+正常运行走LIFO(youngest−first): 首先从queue的tail取task
+工作窃取走FIFO(oldest first): 如果队列空了就随机从其他ForkJoinThread的queue中窃取取head task执行
+
+与普通的线程不同，ForkJoinThread是构造方法直接要传ForkJoinPool
+与普通的线程不同，ForkJoinThread是deamon守护线程
+
+
+
 
 ## VarHandle

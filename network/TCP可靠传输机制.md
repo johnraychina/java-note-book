@@ -140,7 +140,7 @@ TCP Cumulative ACK: ACK会返回最大的sequence number
 ### Zero Window
 Q 如果数据接收方处理太慢，那么窗口大小逐渐变成0，那么接收方一会window size可用了，怎么通知发送端呢？
 A Zero Window Probe(ZWP)，发送端窗口在变成0后，会发送ZWP包给接收方，让接收方ack他的window尺寸，
-ZWP包会定期发送几次（一般是3次），每次大约30-60秒（不同实现可能不一样），如果最后还是0的话，有的TCP实现就会发送RST吧链接断了。
+ZWP包会定期发送几次（一般是3次），每次大约30-60秒（不同实现可能不一样），如果最后还是0的话，有的TCP实现就会发送RST把链接断了。
 
 ### Silly Window Syndrome
 小包问题
@@ -246,3 +246,8 @@ SACK可以让发送端这边再重传过程中，把哪些丢掉的包重传，�
 TCP为了避免reciever处理不过来，使用滑动窗口+ack机制。
 TCP重传机制：1、超时重传机制；2、快速重传机制（3个重复ACK）
 SACK
+
+## 半连接
+1）发送端发送了SYN报文
+2）接收端收到后，返回SYN+ACK给发送端，并将socket放到sync queue
+3）发送端收到报文后，发送ACK给发送端，发送端将socket移入accept queue

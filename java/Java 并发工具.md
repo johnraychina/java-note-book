@@ -44,8 +44,7 @@ http://www.cs.rochester.edu/research/synchronization/pseudocode/duals.html
 for + CAS
 
 # ReentrantLock 与 Condition
-Condition使用场景：有界缓冲，一个线程写满了就等，一个线程读空了就等，ArrayBlockingQueue
-与object monitor不同的是：
+Condition使用场景：有界缓冲，一个线程写满了就等，一个线程读空了就等，ArrayBlockingQueue与object monitor不同的是：
 1.提供了一种顺序明确的通知机制
 2.通知时，不需要获得锁
 
@@ -93,6 +92,7 @@ while(条件不满足) {
     condition.await()
 }
 
+# FutureTask
 
 
 # 底层：基于AQS(AbstractQueuedSynchronizer)实现
@@ -126,24 +126,25 @@ AQS.ConditionObject.Node.nextWaiter 等待条件的下个节点（由于conditio
 
 释放通知：release释放锁的时候，会发出通知，等待队列中的线程可以抢占。
 
-#### condition条件队列
+### condition条件队列
 await时节点会插入condition queue（独占访问）
 收到signal通知时，节点会被转移到主队列
 通过一个字段的特殊值(nextWaiter)来标志节点在哪个队列(SHARED，非SHARED)
 
 acquire->addWaiter, release 操作的是主队列，共享访问, nextWaiter == SHARED
+
 await->ConditionObject.addConditionWaiter, doSignal 操作的是条件队列，独占访问， nextWaiter!=SHARED
 
-
-#### 共享锁和独占锁： 
+### 共享锁和独占锁： 
 AQS.doReleaseShared释放
 AQS.doAcquireSharedInterruptibly
 共享锁，有足够的permit许可时，setHeadAndPropagate会传播给队列中SHARED共享的线程
 
-
-#### 如何实现加锁等待acquire：
+### 如何实现加锁等待acquire：
+```java
   tryAcquire先尝试加锁: 
-    如果没有其他线程锁定(state==0 and !hasQueuedPredecessors()) 则本线程锁定tryAcquire->compareAndSetState,setExclusiveOwnerThread
+    如果没有其他线程锁定则本线程锁定(state==0 and !hasQueuedPredecessors()) 
+    tryAcquire->compareAndSetState,setExclusiveOwnerThread
   加锁失败则acquireQueued加入等待队列尝试加锁: 
     addWaiter把本线程加入到tail(自旋)
     for自旋 { 
@@ -151,38 +152,38 @@ AQS.doAcquireSharedInterruptibly
       加锁成功：setHead本节点设置为头节点（清空thread, prev)，为下一个线程取的锁恢复了第一个条件(当前线程.prev为头节点)，返回中断标志.
       加锁失败：则判断阻塞还是自旋shouldParkAfterFailedAcquire
     }
-
-#### 如何实现释放release:
+```
+### 如何实现释放release:
   tryRelease->setExclusiveOwnerThread将独占线程置为null, setState锁定数减少
   unparkSuccessor唤醒后续有效(t.waitStatus <=0)节点
     如果next为无效节点(s == null || s.waitStatus > 0)，则while从后往前找有效节点
 
-#### 为啥从后往前找？ 
+### 为啥从后往前找？ 
 https://www.zhihu.com/question/50724462
     看插入的地方就明白了，
     新节点pre指向tail，tail指向新节点，这里后继指向前驱的指针是由CAS操作保证线程安全的。
     而cas操作之后t.next=node之前，可能会有其他线程进来。所以出现了问题，从尾部向前遍历是一定能遍历到所有的节点。
 
-#### 判断阻塞等待还是自旋等待shouldParkAfterFailedAcquire:
+### 判断阻塞等待还是自旋等待shouldParkAfterFailedAcquire:
 - 前置节点SIGNAL(-1) return true本线程阻塞，等待释放信号通知
 - 前置节点CANCELLED 被取消(ws > 0) 则循环取前面的节点作为前置节点 return false继续自旋
 - 前置节点CAS设置为SIGNAL 然后return false继续自旋
 
-#### 如何实现取消cancel
+### 如何实现取消cancel
 http://www.cs.rochester.edu/u/scott/synchronization/
 
-#### 如何实现Fair和NonFair: 
+### 如何实现Fair和NonFair: 
 NonFair: lock时先尝试compareAndSetState()
 Fair: lock前线判断队列是否有其他线程hasQueuedPredecessors()
  
 
-####  AbstractQueuedLongSynchronizer
+###  AbstractQueuedLongSynchronizer
 long类型的原子性需要额外的机制保障
 
 #### 超时机制awaitNanos
 while循环 + park
 
-####  重入机制
+###  重入机制
 state=0时为自由
 acquire时 增加state
 release时 减少state
