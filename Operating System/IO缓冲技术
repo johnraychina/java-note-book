@@ -1,0 +1,18 @@
+
+https://www.geeksforgeeks.org/i-o-buffering-and-its-various-techniques/
+
+## 什么是IO缓冲？
+IO buffer是一块内存，用于：设备与设备传输数据，设备与应用程序之间传输数据。
+
+
+## 使用IO缓冲：
+- 解决数据流中，数据生产者和消费者之间速度不匹配（需要一方等待），导致的效率问题。
+- 单缓冲：读完写，写完读，进程切换
+- 双缓冲：读写进程不必互相等待，一个有数据一个没数据时可以swap buffer
+- 环形缓冲
+
+
+
+
+
+

@@ -13,6 +13,8 @@ https://www.cnblogs.com/xiaolincoding/p/13719610.html
     磁盘文件              网卡
 
 
+磁盘-->内核磁盘缓冲区-->用户态-->内核socket缓冲区-->网卡
+
 
 # 基于memory map+write的零拷贝
 **Java层面**

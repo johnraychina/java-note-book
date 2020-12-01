@@ -150,25 +150,11 @@ The dependencies of some of the beans in the application context form a cycle:
 			}
 
 			catch (BeansException ex) {
-				if (logger.isWarnEnabled()) {
-					logger.warn("Exception encountered during context initialization - " +
-							"cancelling refresh attempt: " + ex);
-				}
-
-				// Destroy already created singletons to avoid dangling resources.
-				destroyBeans();
-
-				// Reset 'active' flag.
-				cancelRefresh(ex);
-
-				// Propagate exception to caller.
-				throw ex;
+				...
 			}
 
 			finally {
-				// Reset common introspection caches in Spring's core, since we
-				// might not ever need metadata for singleton beans anymore...
-				resetCommonCaches();
+				...
 			}
 		}
 	}
@@ -262,30 +248,41 @@ FactoryBean是spring容器实例化bean的一个扩展点。
 
 
 
-# Spring启动过程
-
-component scan package
-
-register bean definitions
-
-create bean object
-
-bean name aware
-
-bean post processor: init/afterPropertiesSet
-
-inject beans
-
-
-
-
-# Bean生命周期
-
 # Spring启停回调
-
+SmartLifeCycle
 
 # Spring ApplicationContext容器生命周期
 doClose 
 
 
-# Spring 如何实现依赖bean加载？如何实现依赖bean的释放？
+# Bean生命周期
+https://zhuanlan.zhihu.com/p/141264779
+
+0.spring容器扫描类注册bean定义DefaultListableBeanFactory  -->registerBeanDefinition
+1.根据BeanDefinition实例化createBeanInstance
+2.执行set参数注入方法populateBean
+3.执行BeanNameAware的实现方法获取bean的id
+4.执行BeanFactoryAware的实现方法获取bean的工厂
+5.执行BeanPostProcessor的postProcessBeforeInitialization处理方法
+6.执行InitializingBean的实现方法
+7.执行配置的init-method的指定方法
+8.执行BeanPostProcessor的postProcessAfterInitialization处理方法
+9.执行普通被调用的方法
+10.执行DisposableBean的实现方法
+11.执行配置的destory-method的指定方法
+
+
+# Spring 如何实现依赖bean加载？如何解决循环依赖
+
+DefaultSingletonBeanRegistry#getSingleton(java.lang.String, boolean)
+
+首先要详细检查spring创建bean的三个步骤：
+createBeanInstance：实例化，其实也就是调用对象的构造方法实例化对象
+populateBean：填充属性，这一步主要是对bean的依赖属性进行注入(@Autowired)
+initializeBean：回到一些形如initMethod、InitializingBean等方法
+
+
+singletonObjects 存放完全初始化的bean，从中取出的bean可以直接用。
+earlySingletonObjects: 实例化，尚未填充属性的bean放这里，用于解决循环依赖。
+singletonFactories: 单例工厂，存放bean工厂对象，用于解决循环依赖。
+
