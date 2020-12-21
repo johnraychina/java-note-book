@@ -1,2 +1,25 @@
 org.springframework.aop.framework.autoproxy.AbstractAutoProxyCreator#createProxy
 
+
+
+BeanDefinition
+
+BeanDefinitionRegistry
+
+
+AbstractApplicationContext#refresh
+
+// 调用工厂处理器，注册为beans
+AbstractApplicationContext#invokeBeanFactoryPostProcessors
+
+PostProcessorRegistrationDelegate#invokeBeanFactoryPostProcessors
+- ConfigurableListableBeanFactory beanFactory
+- List<BeanFactoryPostProcessor> beanFactoryPostProcessors) 
+
+//调用BeanFactoryPostProcessors 
+//如果是bean注册处理器，则调用它对BeanDefnintion进行处理
+//这个processor是个的扩展点，它在bean初始化之前执行，你可以自定义对bean definition 做一些加工，影响后面的bean初始化。
+BeanDefinitionRegistryPostProcessor#postProcessBeanDefinitionRegistry
+
+通常你可以利用AopConfigUtils来做一些工作，比如创建代理：
+AopConfigUtils.registerAutoProxyCreatorIfNecessary(registry);

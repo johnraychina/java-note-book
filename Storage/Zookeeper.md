@@ -70,8 +70,7 @@ $ echo stat | nc loclahost 2181
 
 
 # zookeeper原理
-
-
+https://www.cnblogs.com/leesf456/p/6107600.html
 https://zookeeper.apache.org/doc/r3.6.2/zookeeperInternals.html
 
 - 原子广播 Atomic Broadcast
