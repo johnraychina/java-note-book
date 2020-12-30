@@ -39,23 +39,39 @@ SSL的建立过程总共有13个包，第一次建立至少需要9个包。
 1. client hello: client生成的随机数Random，支持的加密套件Support Ciphers, SSL version, sessionID
 2. server hello: server生成的随机数Random, 选择的加密套件, sessionID
 
-至此客户端和服务端都知道了：SSL版本、加密套件、随机数（Random1+ Random2）
+至此客户端和服务端都知道了：SSL版本、加密套件、随机数（Random1+ Random2，后续生成对称秘钥会用到)
 
 ### 第二阶段：server发送证书秘钥 ===> client
 3. Server Cetificate：包含数字证书和到根CA整个链，使得客户端能用服务器证书中的服务器公钥认证服务器，第一次建立连接必须要有这个。
 4. Server key exchange(Optional)：(DH需要，RSA不需要）作为秘钥生成的参数，视秘钥交换算法而定。
     > 在Diffie-Hellman中，客户端无法自行计算预主密钥pre-master-secret; 双方都有助于计算它，因此客户端需要从服务器获取Diffie-Hellman公钥。
     > 此时密钥交换也由签名保护。
-5. Certificate Request(Optional)：服务器用来验证客户端。这一步是可选的，如果在对安全性要求高的常见可能用到。服务器端发出Certificate Request消息，要求客户端发他自己的证书过来进行验证。该消息中包含服务器端支持的证书类型（RSA、DSA、ECDSA等）和服务器端所信任的所有证书发行机构的CA列表，客户端会用这些信息来筛选证书。
+5. Certificate Request(Optional)：服务器用来验证客户端。这一步是可选的，如果在对安全性要求高的常见可能用到（比如招行网上银行专业版，银企直连者插USB或动态秘钥）。
+服务器端发出Certificate Request消息，要求客户端发他自己的证书过来进行验证。
+该消息中包含服务器端支持的证书类型（RSA、DSA、ECDSA等）和服务器端所信任的所有证书发行机构的CA列表，客户端会用这些信息来筛选证书。
 6. Server hello done：第二阶段的结束，第三阶段开始的信号
 
 ### 第三阶段：client发送秘钥 ===> server
 7. client Certificate(Optional)：（要看前面第5个包）为了对服务器证明自身，客户要发送一个证书信息，这是可选的，在IIS中可以配置强制客户端证书认证。
-8. client key exchange：client用服务端给的公钥加密 预备主秘钥（Pre-master-secret），发给server.
-根据之前从服务器端收到的随机数，按照不同的密钥交换算法，算出一个pre-master，发送给服务器，服务器端收到pre-master算出main master。
-而客户端当然也能自己通过pre-master算出main master。如此以来双方就算出了对称密钥。
+（比如招行网上银行专业版，银企直连者插USB或动态秘钥）
 
-9. certificate verify(Optional)：只有在客户端发送了自己证书到服务器端，这个消息才需要发送。其中包含一个签名，对从第一条消息以来的所有握手消息的HMAC值（用master_secret）进行签名。
+----------------------------------------START 敲黑板，这里是关键--------------------------------------------------
+最开始各自两个随机数都是明文传输的：client random, server random
+只有这里pre-master是client公钥加密，server私钥解密，保证了隐私。
+
+8. client key exchange：client用服务端给的公钥加密 预备主秘钥（Pre-master-secret），发给server.
+
+根据之前从服务器端收到的随机数，按照不同的密钥交换算法，算出一个pre-master，发送给服务器。
+服务器端收到pre-master算出main master。
+而客户端当然也能自己通过pre-master算出main master。
+如此以来双方就算出了对称密钥。
+
+- 如果是RSA算法，会生成一个48字节的随机数，然后用server的公钥加密后再放入报文中。
+- 如果是DH算法，这是发送的就是客户端的DH参数，之后服务器和客户端根据DH算法，各自计算出相同的pre-master secret.
+----------------------------------------END 敲黑板，这里是关键--------------------------------------------------
+
+9. certificate verify(Optional)：只有在客户端发送了自己证书到服务器端，这个消息才需要发送。
+其中包含一个签名，对从第一条消息以来的所有握手消息的HMAC值（用master_secret）进行签名。
 
 ### 第四阶段：完成握手协议client finished <===> server finished
 10. change cipher spec
@@ -65,7 +81,8 @@ SSL的建立过程总共有13个包，第一次建立至少需要9个包。
 
 12. change cipher spec
 13. server finished 服务端握手结束通知。
-    - 1. 使用私钥解密加密的Pre-master数据，基于之前(Client Hello 和 Server Hello)交换的两个明文随机数 random_C 和 random_S，计算得到协商密钥:enc_key=Fuc(random_C, random_S, Pre-Master);
+    - 1. 使用私钥解密加密的Pre-master数据，基于之前(Client Hello 和 Server Hello)交换的两个明文随机数 random_C 和 random_S，
+    计算得到协商密钥:enc_key=Fuc(random_C, random_S, Pre-Master);
     - 2. 计算之前所有接收信息的 hash 值，然后解密客户端发送的 encrypted_handshake_message，验证数据和密钥正确性;
     - 3. 发送一个 ChangeCipherSpec（告知客户端已经切换到协商过的加密套件状态，准备使用加密套件和 Session Secret加密数据了）
     - 4. 服务端也会使用 Session Secret 加密一段 Finish 消息发送给客户端，以验证之前通过握手建立起来的加解密通道是否成功。
@@ -95,6 +112,8 @@ Server:
 - pre-master ->算出 main master
 
 
+
+
 #### 几个重要的secret key
 
 
@@ -118,4 +137,16 @@ https://hadyang.github.io/interview/docs/basic/net/https/
 CA 证书的吊销存在两种机制，一种是 在线检查（OCSP），客户端向 CA 机构发送请求检查公钥的靠谱性；第二种是客户端储存一份 CA 提供的 证书吊销列表（CRL），定期更新。前者要求查询服务器具备良好性能，后者要求每次更新提供下次更新的时间，一般时差在几天。安全性要求高的网站建议采用第一种方案。
 
 大部分 CA 并不会提供吊销机制（CRL/OCSP），靠谱的方案是 为根证书提供中间证书，一旦中间证书的私钥泄漏或者证书过期，可以直接吊销中间证书并给用户颁发新的证书。中间证书还可以产生下一级中间证书，多级证书可以减少根证书的管理负担。
+
+
+## 阿里云证书服务
+https://help.aliyun.com/document_detail/98728.html
+
+#### 问答时间
+Q：为什么要用到随机数？
+A：生成对称秘钥需要有参数，这个参数的随机性和动态性。
+
+Q：服务器的私钥如何管理？
+私钥放哪里不被窃取？
+
 

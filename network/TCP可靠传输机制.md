@@ -208,6 +208,9 @@ cwnd: 拥塞窗口Congestion Window，每次ACK后，发送bytes数，根据网�
 发送太快则导致网络拥塞，发送太慢则导致低效，网络情况不断在变，如何动态调整发送速率？
 不断向上探测，如果发生丢包则降低速率。
 
+https://homes.cs.washington.edu/~tom/pubs/pacing.pdf
+
+
 ### 慢启动算法 Slow start
 LastByteSent - LastByteAcked <= cwnd
 cwnd: congestion window

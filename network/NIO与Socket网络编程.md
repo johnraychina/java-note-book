@@ -66,13 +66,61 @@ Epoll 没有最大并发连接的限制，上限是最大可以打开文件的�
 使用 epoll_ctl 向/从上下文添加/移除文件描述符；
 使用 epoll_wait 等待上下文中的事件。
 
-#### epoll的触发方式
+```c
+ 1 for( ; ; )
+ 2     {
+ 3         nfds = epoll_wait(epfd,events,20,500);
+ 4         for(i=0;i<nfds;++i)
+ 5         {
+ 6             if(events[i].data.fd==listenfd) //如果是主socket的事件，则表示有新的连接
+ 7             {
+ 8                 connfd = accept(listenfd,(sockaddr *)&clientaddr, &clilen); //accept这个连接
+ 9                 ev.data.fd=connfd;
+10                 ev.events=EPOLLIN|EPOLLET;
+11                 epoll_ctl(epfd,EPOLL_CTL_ADD,connfd,&ev); //将新的fd添加到epoll的监听队列中
+12             }
+13             else if( events[i].events&EPOLLIN ) //接收到数据，读socket
+14             {
+15 
+16             if ( (sockfd = events[i].data.fd) < 0) continue;
+17                 n = read(sockfd, line, MAXLINE)) < 0    //读
+18                 ev.data.ptr = md;     //md为自定义类型，添加数据
+19                 ev.events=EPOLLOUT|EPOLLET;
+20                 epoll_ctl(epfd,EPOLL_CTL_MOD,sockfd,&ev);//修改标识符，等待下一个循环时发送数据，异步处理的精髓
+21             }
+22             else if(events[i].events&EPOLLOUT) //有数据待发送，写socket
+23             {
+24                 struct myepoll_data* md = (myepoll_data*)events[i].data.ptr;    //取数据
+25                 sockfd = md->fd;
+26                 send( sockfd, md->ptr, strlen((char*)md->ptr), 0 );        //发送数据
+27                 ev.data.fd=sockfd;
+28                 ev.events=EPOLLIN|EPOLLET;
+29                 epoll_ctl(epfd,EPOLL_CTL_MOD,sockfd,&ev); //修改标识符，等待下一个循环时接收数据
+30             }
+31             else
+32             {
+33                 //其他情况的处理
+34             }
+35         }
+36     }
+
+
+```
+
+#### epoll wait 事件触发：水平触发 VS 边沿触发
 https://blog.csdn.net/NK_test/article/details/49331717
+https://www.cnblogs.com/panfeng412/articles/2229095.html
+
 1、level-triggered (LT) 水平触发：
-完全靠Linux-kernel-epoll驱动，应用程序只需要处理从epoll_wait返回的fds， 这些fds我们认为它们处于就绪状态。此时epoll可以认为是更快速的poll。
+完全靠Linux-kernel-epoll驱动，应用程序只需要处理从epoll_wait返回的fds， 这些fds我们认为它们处于就绪状态。
+此时epoll可以认为是更快速的poll。
 
 2、edge-triggered (ET) 边沿触发：
-此模式下，系统仅仅通知应用程序哪些fds变成了就绪状态，一旦fd变成就绪状态，epoll将不再关注这个fd的任何状态信息(从epoll队列移除), 直到应用程序通过读写操作（非阻塞）触发EAGAIN状态，epoll认为这个fd又变为空闲状态，那么epoll又重新关注这个fd的状态变化(重新加入epoll队列)。 随着epoll_wait的返回，队列中的fds是在减少的，所以在大并发的系统中，EPOLLET更有优势，但是对程序员的要求也更高，因为有可能会出现数据读取不完整的问题：
+此模式下，系统仅仅通知应用程序哪些fds变成了就绪状态，一旦fd变成就绪状态，epoll将不再关注这个fd的任何状态信息(从epoll队列移除), 
+
+直到应用程序通过读写操作（非阻塞）触发EAGAIN状态，epoll认为这个fd又变为空闲状态，那么epoll又重新关注这个fd的状态变化(重新加入epoll队列)。 
+
+随着epoll_wait的返回，队列中的fds是在减少的，所以在大并发的系统中，EPOLLET更有优势，但是对程序员的要求也更高，因为有可能会出现数据读取不完整的问题：
    假设现在对方发送了2k的数据，而我们先读取了1k，然后这时调用了epoll_wait：
     如果是边沿触发ET，那么这个fd变成就绪状态就会从epoll 队列移除，则epoll_wait 会一直阻塞，忽略尚未读取的1k数据; 
     而如果是水平触发LT，那么epoll_wait 还会检测到可读事件而返回，我们可以继续读取剩下的1k 数据。

@@ -180,9 +180,18 @@ mainLock 锁的用处，为了控制对workers工作线程集合的访问和book
 4、在队列中等待处太久，会不会导致大量超时重试？
 
 
-## 延时执行
-ScheduledThreadPoolExecutor
-DelayedWorkQueue + Leader-Follower pattern (http://www.cs.wustl.edu/~schmidt/POSA/POSA2/) serves to minimize unnecessary timed waiting. 
+## ScheduledThreadPoolExecutor如何实现延时执行？
+关键组件：DelayedWorkQueue 
+Leader-Follower pattern (http://www.cs.wustl.edu/~schmidt/POSA/POSA2/) serves to minimize unnecessary timed waiting. 
+
+1、排序
+schedule任务的时候，添加到队列DelayedWorkQueue，
+队列中的任务ScheduledFutureTask封装了预期执行时间：按照now()+delay算出一个预期执行时间time
+队列中的任务从小到大排序(compareTo: 时间+sequencer指定的唯一编号)
+
+2、到期执行
+在runWorker getTask会从DelayedWorkQueue中取任务，如果没到预期执行时间time，则for循环await等待.
+
 
 ## ForkJoinPool
 http://gee.cs.oswego.edu/dl/papers/fj.pdf
