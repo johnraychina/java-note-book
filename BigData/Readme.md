@@ -1,7 +1,7 @@
 # 路线图
 
-数据处理演进：RDBMS -> 分片 -> NoSQL (HBase,Hive) + Spark
-
+0. 看看整个大数据演进历史《HbaseHivePig.pptx》
+数据处理演进：RDBMS -> 分片 -> NoSQL (BigTable, HBase,Hive,Cassandra) + Spark
 
 1. 先使看spark文档，入门玩一玩。
 
