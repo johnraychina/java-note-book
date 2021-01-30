@@ -87,8 +87,9 @@ collect
 
 
 
-- shuffle洗牌
-非常消耗性能：磁盘IO，数据序列化，网络IO
+- shuffle 洗牌：有些操作需要将数据重新分派到不同分区（比如reduceByKey操作）
+这非常消耗性能：磁盘IO，数据序列化+反序列化，网络IO
+
 
 - RDD持久化 persist, cache, unpersist(spark自动按LRU淘汰缓存，也可以手工清理)
 MEMORY_ONLY (default)
@@ -101,8 +102,15 @@ MEMORY_AND_DISK_2
 OFF_HEAP (experimental)
 
 
-
 ## 共享变量
+
+https://www.infoq.cn/article/LBzKJPoaFAre5c0cI4ur
+RDD 父子依赖关系 dependencies: NarrowDependency , ShuffleDependency
+
+Spark 操作被洗牌（shuffle）切分为一个个的阶段（stage）。
+Spark会自动将一个阶段（stage）内的同一份数据自动广播给阶段内的任务（task），这个数据会经过序列化和反序列化处理。
+也就是说，在跨阶段（stage）或者需要缓存非序列化的数据时，显示地创建广播变量（broadcst variables）才有必要。
+
 - broadcast variables 广播变量
 广播: val broadCastVar = SparkContext.broadcast(v)
 释放: broadCastVar.unpersist(), 如果后续还被使用，又会自动广播

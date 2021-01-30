@@ -1,7 +1,17 @@
 
+自适应的查询计划
+动态分区剪枝
+查询编译加速
+优化器暗示hints
+ANSI SQL语言支持
+Pyton类型暗示
+性能提升：
+    向量化(40x faster)
+    基于Apache Arrow对 python用户代码调用
+    新的pandas函数api
+
+
 ## Spark 3.0 SQL Engine
-
-
 - Adaptive Query Execution(AQE): change the exectution plan at runtime to automatically set # of reducers and join algorithms: 
     - Broadcast Hash Join
 ```python
