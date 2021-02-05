@@ -87,7 +87,7 @@ collect
 
 
 
-- shuffle 洗牌：有些操作需要将数据重新分派到不同分区（比如reduceByKey操作）
+- shuffle 洗牌：有些操作需要将数据重新分派到不同分区（join, aggregation比如reduceByKey操作）
 这非常消耗性能：磁盘IO，数据序列化+反序列化，网络IO
 
 

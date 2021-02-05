@@ -1,0 +1,1 @@
+[Capacity Read Write Performance](CapacityReadWritePerformance.jpg)

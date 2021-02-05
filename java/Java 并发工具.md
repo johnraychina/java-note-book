@@ -44,6 +44,8 @@ http://www.cs.rochester.edu/research/synchronization/pseudocode/duals.html
 for + CAS
 
 # ReentrantLock 与 Condition
+https://juejin.cn/post/6844903602419400718
+
 Condition使用场景：有界缓冲，一个线程写满了就等，一个线程读空了就等，ArrayBlockingQueue与object monitor不同的是：
 1.提供了一种顺序明确的通知机制
 2.通知时，不需要获得锁
@@ -87,7 +89,7 @@ Condition使用场景：有界缓冲，一个线程写满了就等，一个线�
      }
    }
 ```
-实现时需要注意的是：考虑于操作系统的spurious wakups机制，condition.await()最好放循环中：
+实现时需要注意的是：考虑于操作系统的 spurious wakups机制，condition.await()最好放循环中：
 while(条件不满足) {
     condition.await()
 }
