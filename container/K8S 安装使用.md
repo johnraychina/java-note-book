@@ -1,10 +1,24 @@
 
 # 参考资料
-https://www.youtube.com/watch?v=X48VuDVv0do
-https://jimmysong.io/kubernetes-handbook/#
-
+[Nana视频教程](https://www.youtube.com/watch?v=X48VuDVv0do)
+[jimmysong的k8s手册](https://jimmysong.io/kubernetes-handbook/#)
+[k8s官方教程](https://kubernetes.io/docs/tutorials/kubernetes-basics/)
 
 # 笔记
+
+## k8s是什么
+
+docker 提供了容器能力（镜像打包、分发、容器运行）
+k8s 提供容器管理能力
+- 服务发现和负载均衡
+- 存储管理
+- 面向终态的资源管理：drive current state towards the provided desire state
+- 资源管理自动最优化：optimize(资源, 需求)
+- 自愈能力
+- 秘钥和配置管理
+
+k8s提供了基础模块 + 插件机制，可以扩展功能。
+
 
 ## K8s Main Components
 Node:
@@ -109,6 +123,11 @@ kubectl get nodes
 kubectl version
 ```
 
+**kubectl --help**
+看帮助文档是学习一个命令的好办法，从这里你可以看到作者的设计原则，知道作者是怎么想的，能帮助你更好地理解和使用他开发的工具。
+
+
+
 ## kubectl 部署
 ```sh
 kubectl get nodes/services/pod/replicaset/deployment
@@ -170,4 +189,7 @@ kube-apiserver
 controller
 
 kubelet
+
+
+
 

@@ -69,9 +69,9 @@ redo log 是物理日志，记录的是“在某个数据页上做了什么修�
 事务已经发送到从库上：此时，从库已经收到并应用了该事务，但是客户端仍然会收到事务提交失败的信息，重新提交该事务到新的主上。
 
 ## change buffer
- 
- 
-## mysql多版本管理
+
+
+## mysql多版本管理 undolog
 https://time.geekbang.org/column/article/68963
 https://blog.jcole.us/2014/04/16/the-basics-of-the-innodb-undo-logging-and-history-system/
 https://dev.mysql.com/doc/refman/8.0/en/innodb-multi-versioning.html
@@ -93,6 +93,32 @@ update undolog 更新事务提交后，还不能废弃，若有一致性读事�
 
 所以不能把事务拖得太长（包括哪些只读事务），否则InnoDB无法将对应undologs的数据清空，导致rollback segment回滚段被打满。
 Commit your transactions regularly, including those transactions that issue only consistent reads. Otherwise, InnoDB cannot discard data from the update undo logs, and the rollback segment may grow too big, filling up your tablespace.
+
+## 锁与事务模型
+https://dev.mysql.com/doc/refman/8.0/en/innodb-locking.html 
+https://dev.mysql.com/doc/refman/8.0/en/innodb-transaction-isolation-levels.html
+
+四种隔离级别： Read-Uncommitted, Read-Committed, Repeatable-Read, Serializable
+
+
+
+### 对RR级别的加锁：
+一致性读，从第一个读取开始，事务内读取的都是同一个快照。
+
+加锁读（select for update), update, delete:
+- 如果命中唯一索引，则只对满足条件的索引记录本身加锁，不对前面的gap加锁。
+- 如果没走唯一索引，则按索引范围扫描，加gap锁或者next-key锁，锁住这个范围内的间隙。
+
+### 对RC级别加锁
+一致性读，即使在同一个事务内，每次读写看到的都是新的快照。
+
+加锁读（select for update), update, delete:
+- 如果没命中索引，会先lock，然后where判断是否满足条件，不满足条件则unlock.
+- 只针对索引记录加锁，对前面的gap不加锁，所以允许幻读。
+- 对于UPDATE，如果一条记录以及被锁住了，InnoDB执行“半一致性读”：返回最近提交的版本，MySQL来判断这条记录是否匹配where条件，如果满足条件，则加锁 或 等待锁。
+
+
+RC隔离级别，对应binlog只有基于行的模式才能支持，如果你使用RC隔离级别 + binlog=MIXED模式，mysql服务器自动使用基于行的模式。
 
 
 ## 索引与锁
@@ -135,6 +161,7 @@ MySQL 5.6 引入的索引下推优化（index condition pushdown)， 可以在�
 
 ### 锁
 全局锁、表级锁、行锁
+
 #### 全局锁
 全库备份时FTWRL(Flush Tables With Read Lock) 全库只读，阻塞所有变更。
 官方自带的逻辑备份工具是 mysqldump。当 mysqldump 使用参数–single-transaction 的时候，导数据之前就会启动一个事务，来确保拿到一致性视图。

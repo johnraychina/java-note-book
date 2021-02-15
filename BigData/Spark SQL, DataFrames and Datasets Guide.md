@@ -36,8 +36,14 @@ val spark = SparkSession.builder()
 val df = spark.read.json("examples/src/main/resources/people.json")
 ```
 
-## 操作DataFrame
+## 无类型的Dataset操作（即DataFrame操作）
 http://spark.apache.org/docs/latest/api/scala/org/apache/spark/sql/Dataset.html
+DataFrame为各种编程语言提供DSL操作结构化的数据操作，可以用 Scala, Java, Python and R.
+如前所述，spark 2.0中，DataFrame只是Dataset的行 DataSet[Row].
+相对于Java/Scala中Dataset的“强类型操作”，这些操作也叫做“无类型操作”。
+[RDD-DataFrame-Dataset对比](https://databricks.com/blog/2016/07/14/a-tale-of-three-apache-spark-apis-rdds-dataframes-and-datasets.html)
+[对比图](Spark-SQL-Dataframes-Datasets.png)
+
 ```scala
 df.printSchema()
 df.select("name").show()
@@ -54,12 +60,24 @@ sqlDF.show()
 ```
 
 ## 全局临时视图(需要配置hive存储)
+普通的临时视图，生命周期是session范围的，
+想要创建所有session都能看到的临时视图，就得创建全局的createGlobalTempView,
+这种视图在spark应用停止前都存在。
+
 df.createGlobalTempView("people")
 spark.sql("SELECT * FROM global_temp.people").show()
 spark.newSession().sql("SELECT * FROM global_temp.people").show()
 
 ## 创建DataSet
 "examples/src/main/scala/org/apache/spark/examples/sql/SparkSQLExample.scala"
+Dataset与RDD类似，但不是用Java自带序列化或者Kryo，
+而是用特殊的Encoder 来序列化和传输对象。
+虽然encoder和标准的序列化会将对象转换为bytes,
+但是encoder是动态生成的，
+而且encorder会使用一种格式，**这种格式允许spark不做反序列化直接执行许多操作**：比如filter, sort, hash等。
+
+
+
 
 ## 与RDD互操作
 - 方式一：通过RDD+map Person反射推断schema
