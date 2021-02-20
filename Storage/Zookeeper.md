@@ -7,10 +7,10 @@ Zookeepr是一个分布式的协调服务，服务于分布式系统。
 
 
 # zookeeper能干什么？
-leader选举
 命名服务：类似于电话本，比如服务注册
+leader选举
 锁：实现分布式互斥锁
-同步：生产者-消费者如何协调的问题
+同步：pub/sub发布订阅
 配置管理
 
 # 如何使用zookeeper
@@ -107,6 +107,16 @@ epoch > serverId
 raft一个周期叫叫term
 raft保持日志连续性，心跳方向是leader->follower，ZAB相反。
 
+
+### 具体实践
+https://zookeeper.apache.org/doc/r3.1.2/recipes.html#sc_recipes_twoPhasedCommit
+
+命名服务
+
+同步：pub/sub发布订阅，实现类似队列的功能
+锁：实现分布式互斥锁
+leader选举
+二阶段提交
 
 ### Raft
 
