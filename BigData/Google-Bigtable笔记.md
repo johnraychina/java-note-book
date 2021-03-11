@@ -1,6 +1,18 @@
+[Google BigTable论文](./Google-Bigtable.pdf)
 
+
+## 1 介绍
+Bigtable is a distributed storage system for managing structured data that is designed to scale to a very large size: petabytes of data across thousands of commodity servers.
+
+Bigtable has achieved several goals: wide applicability, scalability, high performance, and high availability.
 
 ## 2 数据模型
+A Bigtable is a sparse, distributed, persistent multidimensional sorted map. 
+The map is indexed by a rowkey, column key, and a timestamp; 
+each value in the map is an uninterpreted array of bytes.
+
+(row:string, column:string, time:int64) -> string
+
 Rows: 对同一行的读写是原子的。
 
 Row key: Bigtable按row key顺序组织数据。
@@ -94,7 +106,7 @@ major compaction
 怎么办呢：先对log排序即可，按{table, row name, log sequence number}排序（可以拆分为多个文件并行执行排序，然后merge），相同tablet的row会靠在一起。
 
 - tablet恢复提速：先做一次压缩
-If the master moves a tablet from one tablet server to another, the source tablet server first does a minor com- paction on that tablet. This compaction reduces recov- ery time by reducing the amount of uncompacted state in the tablet server’s commit log. After finishing this com- paction, the tablet server stops serving the tablet. Before it actually unloads the tablet, the tablet server does an- other (usually very fast) minor compaction to eliminate any remaining uncompacted state in the tablet server’s log that arrived while the first minor compaction was being performed. After this second minor compaction is complete, the tablet can be loaded on another tablet server without requiring any recovery of log entries.
+If the master moves a tablet from one tablet server to another, the source tablet server first does a minor com- paction on that tablet. This compaction reduces recovery time by reducing the amount of uncompacted state in the tablet server’s commit log. After finishing this com- paction, the tablet server stops serving the tablet. Before it actually unloads the tablet, the tablet server does an- other (usually very fast) minor compaction to eliminate any remaining uncompacted state in the tablet server’s log that arrived while the first minor compaction was being performed. After this second minor compaction is complete, the tablet can be loaded on another tablet server without requiring any recovery of log entries.
 
 - 最大限度利用不变性
     - 得益于SSTables的不变性，除了SSTable caches，还有BigTable系统各个其他的模块，都得到了极大简化：没有复杂的同步逻辑，并行处理变得非常高效，可变的数据只是memtable，对读写并发的场景利用copy-on-write技术。

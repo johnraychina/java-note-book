@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<!-- saved from url=(0067)https://www.oracle.com/technetwork/tutorials/tutorials-1876574.html -->
+<html><!-- OBE Template 2012: Version 3.0 Last updated 3/13/2012--><!-- Author: Glenn Stokol and Marcie Young--><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<title>Getting Started with the G1 Garbage Collector</title>
+<link rel="stylesheet" href="./G1垃圾回收_files/jquery-ui-1.8.16.custom.css">
+<link rel="stylesheet" href="./G1垃圾回收_files/base.css">
+
+<!-- Load jQuery, SimpleModal and Basic JS files -->
+<script>
+// akam-sw.js install script version 1.3.3
+"serviceWorker"in navigator&&"find"in[]&&function(){var e=new Promise(function(e){"complete"===document.readyState||!1?e():(window.addEventListener("load",function(){e()}),setTimeout(function(){"complete"!==document.readyState&&e()},1e4))}),n=window.akamServiceWorkerInvoked,r="1.3.3";if(n)aka3pmLog("akam-setup already invoked");else{window.akamServiceWorkerInvoked=!0,window.aka3pmLog=function(){window.akamServiceWorkerDebug&&console.log.apply(console,arguments)};function o(e){(window.BOOMR_mq=window.BOOMR_mq||[]).push(["addVar",{"sm.sw.s":e,"sm.sw.v":r}])}var i="/akam-sw.js",a=new Map;navigator.serviceWorker.addEventListener("message",function(e){var n,r,o=e.data;if(o.isAka3pm)if(o.command){var i=(n=o.command,(r=a.get(n))&&r.length>0?r.shift():null);i&&i(e.data.response)}else if(o.commandToClient)switch(o.commandToClient){case"enableDebug":window.akamServiceWorkerDebug||(window.akamServiceWorkerDebug=!0,aka3pmLog("Setup script debug enabled via service worker message"),p());break;case"boomerangMQ":o.payload&&(window.BOOMR_mq=window.BOOMR_mq||[]).push(o.payload)}aka3pmLog("akam-sw message: "+JSON.stringify(e.data))});var t=function(e){return new Promise(function(n){var r,o;r=e.command,o=n,a.has(r)||a.set(r,[]),a.get(r).push(o),navigator.serviceWorker.controller&&(e.isAka3pm=!0,navigator.serviceWorker.controller.postMessage(e))})},c=function(e){return t({command:"navTiming",navTiming:e})},s=null,m={},d=function(){var e=i;return s&&(e+="?othersw="+encodeURIComponent(s)),function(e,n){return new Promise(function(r,i){aka3pmLog("Registering service worker with URL: "+e),navigator.serviceWorker.register(e,n).then(function(e){aka3pmLog("ServiceWorker registration successful with scope: ",e.scope),r(e),o(1)}).catch(function(e){aka3pmLog("ServiceWorker registration failed: ",e),o(0),i(e)})})}(e,m)},g=ServiceWorkerContainer.prototype.register;if(ServiceWorkerContainer.prototype.register=function(n,r){return n.includes(i)?g.call(this,n,r):(aka3pmLog("Overriding registration of service worker for: "+n),s=new URL(n,window.location.href),m=r,navigator.serviceWorker.controller?new Promise(function(n,r){var o=navigator.serviceWorker.controller.scriptURL;if(o.includes(i)){var a=encodeURIComponent(s);o.includes(a)?(aka3pmLog("Cancelling registration as we already integrate other SW: "+s),navigator.serviceWorker.getRegistration().then(function(e){n(e)})):e.then(function(){aka3pmLog("Unregistering existing 3pm service worker"),navigator.serviceWorker.getRegistration().then(function(e){e.unregister().then(function(){return d()}).then(function(e){n(e)}).catch(function(e){r(e)})})})}else aka3pmLog("Cancelling registration as we already have akam-sw.js installed"),navigator.serviceWorker.getRegistration().then(function(e){n(e)})}):g.call(this,n,r))},navigator.serviceWorker.controller){var u=navigator.serviceWorker.controller.scriptURL;u.includes("/akam-sw.js")||u.includes("/akam-sw-preprod.js")||u.includes("/threepm-sw.js")||(aka3pmLog("Detected existing service worker. Removing and re-adding inside akam-sw.js"),s=new URL(u,window.location.href),e.then(function(){navigator.serviceWorker.getRegistration().then(function(e){m={scope:e.scope},e.unregister(),d()})}))}else e.then(function(){window.akamServiceWorkerPreprod&&(i="/akam-sw-preprod.js"),d()});if(window.performance){var w=window.performance.timing,l=w.responseEnd-w.responseStart;c(l)}e.then(function(){t({command:"pageLoad"})});var k=!1;function p(){window.akamServiceWorkerDebug&&!k&&(k=!0,aka3pmLog("Initializing debug functions at window scope"),window.aka3pmInjectSwPolicy=function(e){return t({command:"updatePolicy",policy:e})},window.aka3pmDisableInjectedPolicy=function(){return t({command:"disableInjectedPolicy"})},window.aka3pmDeleteInjectedPolicy=function(){return t({command:"deleteInjectedPolicy"})},window.aka3pmGetStateAsync=function(){return t({command:"getState"})},window.aka3pmDumpState=function(){aka3pmGetStateAsync().then(function(e){aka3pmLog(JSON.stringify(e,null,"\t"))})},window.aka3pmInjectTiming=function(e){return c(e)},window.aka3pmUpdatePolicyFromNetwork=function(){return t({command:"pullPolicyFromNetwork"})})}p()}}();</script>
+<script type="text/javascript" src="./G1垃圾回收_files/viewport.js"></script>
+<script type="text/javascript" src="./G1垃圾回收_files/jquery.js"></script>
+<script type="text/javascript" src="./G1垃圾回收_files/jquery-ui-1.8.16.custom.min.js"></script>
+<script type="text/javascript" src="./G1垃圾回收_files/basic.js"></script>
+<!--[if lt IE 9]>
+<script src="js/html5.js"></script>
+<![endif]-->
+<style type="text/css">
+.ImageSize{width:640px; height:480px}
+.Image400x300{width:400; height:300px }
+.NoNumbers figure{ list-style:none; display:block;}
+body{ font-size:15px; width:960px; }
+section { width:90%; }
+em { font-style:normal; color:maroon; }
+pre { white-space:pre-wrap; }
+</style>
+
+  <script>(window.BOOMR_mq=window.BOOMR_mq||[]).push(["addVar",{"rua.upush":"false","rua.cpush":"false","rua.upre":"false","rua.cpre":"false","rua.uprl":"false","rua.cprl":"false","rua.cprf":"false","rua.trans":"SJ-9e46a3a9-2234-4f3e-9ae9-ce978a3521ee","rua.cook":"false","rua.ims":"false","rua.ufprl":"false","rua.cfprl":"true"}]);</script>
+                          <script>!function(e){var n="https://s.go-mpulse.net/boomerang/";if("False"=="True")e.BOOMR_config=e.BOOMR_config||{},e.BOOMR_config.PageParams=e.BOOMR_config.PageParams||{},e.BOOMR_config.PageParams.pci=!0,n="https://s2.go-mpulse.net/boomerang/";if(window.BOOMR_API_key="DXNLE-YBWWY-AR74T-WMD99-77VRA",function(){function e(){if(!o){var e=document.createElement("script");e.id="boomr-scr-as",e.src=window.BOOMR.url,e.async=!0,i.parentNode.appendChild(e),o=!0}}function t(e){o=!0;var n,t,a,r,d=document,O=window;if(window.BOOMR.snippetMethod=e?"if":"i",t=function(e,n){var t=d.createElement("script");t.id=n||"boomr-if-as",t.src=window.BOOMR.url,BOOMR_lstart=(new Date).getTime(),e=e||d.body,e.appendChild(t)},!window.addEventListener&&window.attachEvent&&navigator.userAgent.match(/MSIE [67]\./))return window.BOOMR.snippetMethod="s",void t(i.parentNode,"boomr-async");a=document.createElement("IFRAME"),a.src="about:blank",a.title="",a.role="presentation",a.loading="eager",r=(a.frameElement||a).style,r.width=0,r.height=0,r.border=0,r.display="none",i.parentNode.appendChild(a);try{O=a.contentWindow,d=O.document.open()}catch(c){n=document.domain,a.src="javascript:var d=document.open();d.domain='"+n+"';void(0);",O=a.contentWindow,d=O.document.open()}if(n)d._boomrl=function(){this.domain=n,t()},d.write("<bo"+"dy onload='document._boomrl();'>");else if(O._boomrl=function(){t()},O.addEventListener)O.addEventListener("load",O._boomrl,!1);else if(O.attachEvent)O.attachEvent("onload",O._boomrl);d.close()}function a(e){window.BOOMR_onload=e&&e.timeStamp||(new Date).getTime()}if(!window.BOOMR||!window.BOOMR.version&&!window.BOOMR.snippetExecuted){window.BOOMR=window.BOOMR||{},window.BOOMR.snippetStart=(new Date).getTime(),window.BOOMR.snippetExecuted=!0,window.BOOMR.snippetVersion=12,window.BOOMR.url=n+"DXNLE-YBWWY-AR74T-WMD99-77VRA";var i=document.currentScript||document.getElementsByTagName("script")[0],o=!1,r=document.createElement("link");if(r.relList&&"function"==typeof r.relList.supports&&r.relList.supports("preload")&&"as"in r)window.BOOMR.snippetMethod="p",r.href=window.BOOMR.url,r.rel="preload",r.as="script",r.addEventListener("load",e),r.addEventListener("error",function(){t(!0)}),setTimeout(function(){if(!o)t(!0)},3e3),BOOMR_lstart=(new Date).getTime(),i.parentNode.appendChild(r);else t(!1);if(window.addEventListener)window.addEventListener("load",a,!1);else if(window.attachEvent)window.attachEvent("onload",a)}}(),"".length>0)if(e&&"performance"in e&&e.performance&&"function"==typeof e.performance.setResourceTimingBufferSize)e.performance.setResourceTimingBufferSize();!function(){if(BOOMR=e.BOOMR||{},BOOMR.plugins=BOOMR.plugins||{},!BOOMR.plugins.AK){var n="true"=="true"?1:0,t="",a="fj4etiqxerqbeyche2ya-f-f1237021d-clientnsv4-s.akamaihd.net",i={"ak.v":"30","ak.cp":"82485","ak.ai":parseInt("604074",10),"ak.ol":"0","ak.cr":91,"ak.ipv":4,"ak.proto":"h2","ak.rid":"3371a604","ak.r":14026,"ak.a2":n,"ak.m":"dscx","ak.n":"essl","ak.bpcip":"42.120.73.0","ak.cport":53842,"ak.gh":"96.7.248.55","ak.quicv":"","ak.tlsv":"tls1.3","ak.0rtt":"","ak.csrc":"-","ak.acc":"","ak.t":"1615275696","ak.ak":"hOBiQwZUYzCg5VSAfCLimQ==njW5GnCAhhxXxIL2agiOm4+CE1A2/bGq1YyLA8NaTl7I64tIqXKBvhQtveNuWfFa6vmcdcdRwBt3t2dKxJa4cZdcTYLx471RNjMdtxIKBxW41HJC2xBNsUgXEHZkAXSvf6wCvQdAK0pVai2uHTsqs8EelCtYm2Hjj5UPCsUE0HqDljnIehb68BOeyjhh++kBTh4AlbPkpMft2wNWknRoQJxVddzTXg3yMZoYqoaHylSWzQTaLFhsVKwoJHVWg6ysve3GsHZ+4ehK6n53Unp/ODwJt+9esUykUoJTZRcOew1MrCKNjXMvHGbkigTXKd0zw395F5/mOTylVPewtgkS2sedFEchjc5K4zSj/+1WQaElbCu4oHxSCyuxi9iYneF4UP/5Ddbqjfsl0/yKw+l/RcvmQ72D8f32AB70ZijeqUk=","ak.pv":"196","ak.dpoabenc":""};if(""!==t)i["ak.ruds"]=t;var o={i:!1,av:function(n){var t="http.initiator";if(n&&(!n[t]||"spa_hard"===n[t]))i["ak.feo"]=void 0!==e.aFeoApplied?1:0,BOOMR.addVar(i)},rv:function(){var e=["ak.bpcip","ak.cport","ak.cr","ak.csrc","ak.gh","ak.ipv","ak.m","ak.n","ak.ol","ak.proto","ak.quicv","ak.tlsv","ak.0rtt","ak.r","ak.acc","ak.t"];BOOMR.removeVar(e)}};BOOMR.plugins.AK={akVars:i,akDNSPreFetchDomain:a,init:function(){if(!o.i){var e=BOOMR.subscribe;e("before_beacon",o.av,null,null),e("onbeacon",o.rv,null,null),o.i=!0}return this},is_complete:function(){return!0}}}}()}(window);</script><link href="./G1垃圾回收_files/DXNLE-YBWWY-AR74T-WMD99-77VRA" rel="preload" as="script"><script>bazadebezolkohpepadr="1584446579"</script><script type="text/javascript" src="./G1垃圾回收_files/5e70bc27" defer=""></script><script id="boomr-scr-as" src="./G1垃圾回收_files/DXNLE-YBWWY-AR74T-WMD99-77VRA" async=""></script><link id="dnsprefetchlink" rel="dns-prefetch" href="https://fj4etiqxerqbeyche2ya-f-f1237021d-clientnsv4-s.akamaihd.net/"></head> 
+<body>
+<article> 
+  <header>
+    <h1>Getting Started with the G1 Garbage Collector</h1>
+    <nav>
+     <span id="toolbar" class="ui-corner-all">
+	  <button id="topicBtn">Topic List</button>
+	  <button id="tglTopicBtn">Expand All Topics</button>
+	  <button id="tglImageBtn">Hide All Images</button>
+	  <button id="printBtn">Print</button>
+      </span>    
+    </nav>
+  </header>
+<div id="container">
+  <section>
+    <h2 id="overview">Overview</h2>
+    <div><ol>
+     <h4>Purpose</h4>
+      <p>This tutorial covers the basics of how to use the G1 garbage collector  and how it can be used with the Hotspot JVM. You will learn how the G1 collector functions internally, the key command line switches for using G1, and options for logging its operation.</p>
+     <h4>Time to Complete</h4>
+      <p>Approximately 1 hour</p>
+     <h4>Introduction</h4>
+      <p>This OBE covers the basics of Java Virtual Machine(JVM) G1 Garbage Collection (GC) in Java. In the first part of the OBE, an overview of the JVM is provided along with an introduction to Garbage Collection and performance. Next students are provided with a review of how the CMS collector works with the Hotspot JVM. Next, a step by step guide to how Garbage Collection works when using the G1 garbage collection with a Hotspot JVM. Following that, a section is provided covering the Garbage Collection command line options available with the G1 garbage collector. Finally, you will learn about logging options to use with the G1 collector.</p>    
+      <h4>Hardware and Software Requirements</h4>
+      <p>The following is a list of hardware and software requirements:</p>
+	<ul>
+		<li>A PC running Windows XP or later, Mac OS X or Linux. Note that the hands on is done with Windows 7 and has not been tested on all platforms. However, everything should work fine on OS X or Linux. Also a machine with more than one core is preferable.</li>
+		<li>Java 7 Update 9 or later</li>
+		<li>The latest Java 7 Demos and Samples Zip file</li>
+  </ul>
+      <a name="RequiredSoftware"></a>
+      <h4>Prerequisites</h4>
+      <p>Before starting this tutorial, you should: </p>
+  <ul>
+    	<li>If you have not done so, download and install the latest version of the Java JDK (JDK 7 u9 or later).<br>
+    	<a href="http://www.oracle.com/technetwork/java/javase/downloads/index.html">Java 7 JDK Downloads</a></li>
+    	<li>Download and install the Demos and Samples zip file from the same location. Unzip the file and place the contents in a directory. For example: <code>C:\javademos</code></li>
+  </ul>
+
+    </ol></div>
+  </section>
+  <section class="NoNumbers">
+    <h2 id="t1">Java Technology and the JVM</h2>
+    <div><ol>
+    <section>
+      
+      <h3 id="t1s1" class="r_arrow">Java Overview</h3>
+      <p>Java is a programming language and computing platform first released by Sun Microsystems in 1995. It is the underlying technology that powers Java programs including utilities, games, and business applications. Java runs on more than 850 million personal computers worldwide, and on billions of devices worldwide, including mobile and TV devices. Java is composed of a number of key components that, as a whole, create the Java platform.</p>
+      
+      <h4>Java Runtime Edition</h4>
+      <p>When you download Java, you get the Java Runtime Environment (JRE).  The JRE consists of the Java Virtual Machine (JVM), Java platform core classes, and supporting Java platform libraries. All three are required to run Java applications on your computer. With Java 7, Java applications  run as desktop applications from the operating system, as a desktop application but installed from the Web using Java Web Start, or as a Web Embedded application in a browser (using JavaFX).</p>
+      
+      <h4>Java Programming Language</h4>
+      <p>Java is an object-oriented programming language that includes the following features.</p>
+      <ul>
+        <li>Platform Independence - Java applications are compiled into <i>bytecode</i> which is stored in class files and loaded in a JVM. Since applications run in a JVM, they can be run on many different operating systems and devices.</li>
+        <li>Object-Oriented - Java is an object-oriented language that take many of the features of C and C++ and improves upon them.</li>
+        <li>Automatic Garbage Collection - Java automatically allocates and deallocates memory so programs are not burdened with that task.</li>
+        <li>Rich Standard Library - Java includes a vast number of premade objects that can be used to perform such tasks as input/output, networking, and date manipulation.</li>
+      </ul>
+      
+      <h4>Java Development Kit</h4>
+      <p>The Java Development Kit (JDK) is a collection of tools for developing Java applications. With the JDK, you can compile programs written in the Java Programming language and run them in a JVM. In addition, the JDK provides tools for packaging and distributing your applications. 
+      </p>
+      <p>The JDK and the JRE share the Java Application Programming Interfaces (<a href="http://docs.oracle.com/javase/7/docs/api/">Java API</a>). The Java API is a collection of prepackaged libraries developers use to create Java applications. The Java API makes development easier by providing the tools to complete many common programming tasks including string manipulation, date/time processing, networking, and implementing data structures (e.g., lists, maps, stacks, and queues).
+      </p>
+
+      <h4>Java Virtual Machine</h4>
+      <p>The Java Virtual Machine (JVM) is an abstract computing machine. The JVM is a program that looks like a machine to the programs written to execute in it. This way, Java programs are written to the same set of  interfaces and libraries. Each JVM implementation for a specific operating system, translates the Java programming instructions into instructions and commands that run on the local operating system. This way, Java programs achieve platform independence.</p>
+
+      <p>The first prototype implementation of the Java virtual machine, done at Sun Microsystems, Inc., emulated the Java virtual machine instruction set in software hosted by a handheld device that resembled a contemporary Personal Digital Assistant (PDA). Oracle's current implementations emulate the Java virtual machine on mobile, desktop and server devices, but the Java virtual machine does not assume any particular implementation technology, host hardware, or host operating system. It is not inherently interpreted, but can just as well be implemented by compiling its instruction set to that of a silicon CPU. It may also be implemented in microcode or directly in silicon.</p>
+
+      <p>The Java virtual machine knows nothing of the Java programming language, only of a particular binary format, the class file format. A class file contains Java virtual machine instructions (or bytecodes) and a symbol table, as well as other ancillary information.</p>
+
+      <p>For the sake of security, the Java virtual machine imposes strong syntactic and structural constraints on the code in a class file. However, any language with functionality that can be expressed in terms of a valid class file can be hosted by the Java virtual machine. Attracted by a generally available, machine-independent platform, implementors of other languages can turn to the Java virtual machine as a delivery vehicle for their languages. <sub>(1) <a href="http://docs.oracle.com/javase/specs/jvms/se7/html/jvms-1.html">The Java Virtual Machine</a></sub></p>
+
+
+    </section>
+
+    <section>
+      <h3 id="t1s2" class="r_arrow">Exploring the JVM Architecture</h3>
+      <h4>Hotspot Architecture</h4>
+      <figure>
+        <figcaption>
+
+        <p>The HotSpot JVM possesses an architecture that supports a strong foundation of features and capabilities and supports the ability to realize high performance and massive scalability. For example, the HotSpot JVM JIT compilers generate dynamic optimizations. In other words, they make optimization decisions while the Java application is running and generate high-performing native machine instructions targeted for the underlying system architecture. In addition, through the maturing evolution and continuous engineering of its runtime environment and multithreaded garbage collector, the HotSpot JVM yields high scalability on even the largest available computer systems.</p>
+
+       </figcaption>
+       <img src="./G1垃圾回收_files/Slide1.PNG" class="ScreenShot ImageSize" id="t20101">
+       <figcaption>
+        <p>The main components of the JVM include the class loader, the runtime data areas, and the execution engine.</p>
+       </figcaption>
+     </figure>
+
+     <h4>Key Hotspot Components</h4>
+     <figure>
+       <figcaption>
+        <p>The key components of the JVM that relate to performance are highlighted in the following image.</p>
+       </figcaption>
+       <img src="./G1垃圾回收_files/Slide2.PNG" class="ScreenShot ImageSize" id="t20102">
+       <figcaption>
+        <p>There are three components of the JVM that are focused on when tuning performance. The <i>heap</i> is where your object data is stored. This area is then managed by the garbage collector selected at startup. Most tuning options relate to sizing the heap and choosing the most appropriate garbage collector for your situation. The JIT compiler also has a big impact on performance but rarely requires tuning with the newer versions of the JVM.</p>
+       </figcaption>
+     </figure>
+
+  </section>
+     
+    <section>
+      <h3 id="t1s3" class="r_arrow">Performance Basics</h3>
+      <p>Typically, when tuning a Java application, the focus is on one of two main goals: responsiveness or throughput. We will refer back to these concepts as the tutorial progresses.</p>
+
+      <h4>Responsiveness</h4>
+      <p>Responsiveness refers to how quickly an application or system responds with a requested piece of data. Examples include: </p>
+      <ul>
+        <li>How quickly a desktop UI responds to an event</li>
+        <li>How fast a website returns a page</li>
+        <li>How fast a database query is returned</li>
+      </ul>
+      <p>For applications that focus on responsiveness, large pause times are not acceptable. The focus is on responding in short periods of time.</p>
+
+      <h4>Throughput</h4>
+      <p>Throughput focuses on maximizing the amount of work by an application in a specific period of time. Examples of how throughput might be measured include:</p>
+      <ul>
+        <li>The number of transactions completed in a given time.</li>
+        <li>The number of jobs that a batch program can complete in an hour.</li>
+        <li>The number of database queries that can be completed in an hour.</li>
+      </ul>
+      <p>High pause times are acceptable for applications that focus on throughput. Since high throughput applications focus on benchmarks over  longer periods of time, quick response time is not a consideration.</p>
+
+    </section>
+
+   </ol></div>
+   
+  </section>
+
+  <section class="NoNumbers">
+    <h2 id="t2">The G1 Garbage Collector</h2>
+    <div><ol>
+      <h3>The G1 Garbage Collector</h3>
+      <p>The Garbage-First (G1) collector is a server-style garbage collector, targeted for multi-processor machines with large memories. It meets garbage collection (GC) pause time goals with a high probability, while achieving high throughput. <i>The G1 garbage collector is fully supported in Oracle JDK 7 update 4 and later releases</i>. The G1 collector is designed for applications that:</p>
+      
+      <ul>
+        <li>Can operate concurrently with applications threads like the CMS collector.</li>
+        <li>Compact free space without lengthy GC induced pause times.</li>
+        <li>Need more predictable GC pause durations.</li>
+        <li>Do not want to sacrifice a lot of throughput performance.</li>
+        <li>Do not require a much larger Java heap.</li>
+      </ul>
+      
+      <p>G1 is planned as the long term replacement for the Concurrent Mark-Sweep Collector (CMS). Comparing G1 with CMS, there are differences that make G1 a better solution. One difference is that G1 is a compacting collector. G1 compacts sufficiently to completely avoid the use of fine-grained free lists for allocation, and instead relies on regions. This considerably simplifies parts of the collector, and mostly eliminates potential fragmentation issues. Also, G1 offers more predictable garbage collection pauses than the CMS collector, and allows users to specify desired pause targets.</p>
+      
+      <h4>G1 Operational Overview</h4>
+          <p>The older garbage collectors (serial, parallel, CMS) all structure the heap into three sections: young generation, old generation, and permanent generation of a fixed memory size.</p>      
+    <figure>  
+      <img src="./G1垃圾回收_files/HeapStructure.png" class="ScreenShot ImageSize" id="t30101">
+        <figcaption>
+          <p>All memory objects end up in one of these three sections.</p>
+        </figcaption>
+    </figure>
+      
+    <figure>
+      <figcaption>
+        <p>The G1 collector takes a different approach.</p>
+      </figcaption>    
+      <img src="./G1垃圾回收_files/Slide9.PNG" class="ScreenShot ImageSize" id="t30102">
+        <figcaption>
+          <p>The heap is partitioned into a set of equal-sized heap regions, each a contiguous range of virtual memory. Certain region sets are assigned the same roles (eden, survivor, old) as in the older collectors, but there is not a fixed size for them.  This provides greater flexibility in memory usage.</p>
+        </figcaption>
+    </figure>
+    <p>When performing garbage collections, G1 operates in a manner similar to the CMS collector. G1 performs a concurrent global marking phase to determine the liveness of objects throughout the heap. After the mark phase completes, G1 knows which regions are mostly empty. It collects in these regions first, which usually yields a large amount of free space. This is why this method of garbage collection is called Garbage-First. As the name suggests, G1 concentrates its collection and compaction activity on the areas of the heap that are likely to be full of reclaimable objects, that is, garbage. G1 uses a pause prediction model to meet a user-defined pause time target and selects the number of regions to collect based on the specified pause time target.</p>
+    
+    <p>The regions identified by G1 as ripe for reclamation are garbage collected using evacuation. G1 copies objects from one or more regions of the heap to a single region on the heap, and in the process both compacts and frees up memory. This evacuation is performed in parallel on multi-processors, to decrease pause times and increase throughput. Thus, with each garbage collection, G1 continuously works to reduce fragmentation, working within the user defined pause times. This is beyond the capability of both the previous methods. CMS (Concurrent Mark Sweep ) garbage collector does not do compaction. ParallelOld garbage collection performs only whole-heap compaction, which results in considerable pause times.</p>
+    
+    <p>It is important to note that G1 is not a real-time collector. It meets the set pause time target with high probability but not absolute certainty. Based on data from previous collections, G1 does an estimate of how many regions can be collected within the user specified target time. Thus, the collector has a reasonably accurate model of the cost of collecting the regions, and it uses this model to determine which and how many regions to collect while staying within the pause time target.</p>
+    
+    <p><b>Note:</b> G1 has both concurrent (runs along with application threads, e.g., refinement, marking, cleanup) and parallel (multi-threaded, e.g., stop the world) phases. Full garbage collections are still single threaded, but if tuned properly your applications should avoid full GCs.</p> 
+    
+    <h4>G1 Footprint</h4>
+    <p>If you migrate from the ParallelOldGC or CMS collector to G1, you will likely see a larger JVM process size. This is largely related to "accounting" data structures such as Remembered Sets and Collection Sets. </p>
+    <p><b>Remembered Sets</b> or RSets track object references into a given region. There is one RSet per region in the heap. The RSet enables the parallel and independent collection of a region. The overall footprint impact of RSets is less than 5%.</p>
+    <p><b>Collection Sets</b> or CSets the set of regions that will be collected in a GC. All live data in a CSet is evacuated (copied/moved) during a GC. Sets of regions can be Eden, survivor, and/or old generation. CSets have a less than 1% impact on the size of the JVM.
+    </p>
+    
+    
+    <h4>Recommended Use Cases for G1</h4>      
+    <p>The first focus of G1 is to provide a solution for users running applications that require large heaps with limited GC latency. This means heap sizes of around 6GB or larger, and stable and predictable pause time below 0.5 seconds.</p>
+    <p>Applications running today with either the CMS or the ParallelOldGC garbage collector would benefit switching to G1 if the application has one or more of the following traits.</p>
+    <ul>
+      <li>Full GC durations are too long or too frequent.</li>
+      <li>The rate of object allocation rate or promotion varies significantly.</li>
+      <li>Undesired long garbage collection or compaction pauses (longer than 0.5 to 1 second)</li>
+    </ul>
+    <p><b>Note:</b> If you are using CMS or ParallelOldGC and your application is not experiencing long garbage collection pauses, it is fine to stay with your current collector. Changing to the G1 collector is not a requirement for using the latest JDK.</p>
+    
+  </ol></div>
+ </section>
+
+ <section>
+    <h2 id="t4">Reviewing GC with the CMS</h2>
+    <div><ol>
+      <h3>Reviewing Generational GC and CMS</h3>
+      <p>The Concurrent Mark Sweep (CMS) collector (also referred to as the concurrent low pause collector) collects the tenured generation. It attempts to minimize the pauses due to garbage collection by doing most of the garbage collection work concurrently with the application threads. Normally the concurrent low pause collector does not copy or compact the live objects. A garbage collection is done without moving the live objects. If fragmentation becomes a problem, allocate a larger heap.
+      </p>
+      <p><b>Note:</b> CMS collector on young generation uses the same algorithm as that of the parallel collector.</p>
+      
+	<div>
+  <style type="text/css">
+
+/* Two Column Table */
+#twoColThinTable { width:600px; border:1px solid #D9D5BE; border-collapse:collapse; margin:0px; background:white; font-size:0.9em; }
+#twoColThinTable td { padding:6px; }
+#twoColThinTable .titleRow { border-bottom: 1px solid #D9D5BE; font-weight:bold; font-size:1.1em; color:gray; text-align:center; }
+#twoColThinTable .row { border-bottom: 1px solid #D9D5BE; }
+#twoColThinTable .col1 { width:30%; text-align:center; vertical-align:top;}
+#twoColThinTable .col2 { width:70%; text-align:left; vertical-align:top;}
+#twoColThinTable .row:hover {background: #EDEDED;}
+  
+  </style>
+<!-- html table -->
+      <h4>CMS Collection Phases</h4>
+      <p>The CMS collector performs the following phases on the old generation of the heap:</p>
+  <table border="1px" id="twoColThinTable">
+    <thead>
+      <tr class="titleRow">
+        <td>Phase</td>
+        <td>Description</td>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="row">
+        <td class="col1">(1) Initial Mark<br>
+        <i>(Stop the World Event)</i></td>
+        <td class="col2">
+        Objects in old generation are “marked” as reachable including those objects which may be reachable from young generation. Pause times are typically short in duration relative to minor collection pause times.
+        </td>
+      </tr>
+      <tr class="row">
+       <td class="col1">(2) Concurrent Marking</td>
+       <td class="col2">
+       Traverse the tenured generation object graph for reachable objects concurrently while Java application threads are executing. Starts scanning from marked objects and transitively marks all objects reachable from the roots. The mutators are executing during the concurrent phases 2, 3, and 5 and any objects allocated in the CMS generation during these phases (including promoted objects) are immediately marked as live.
+       </td>
+     </tr>
+      <tr class="row">
+       <td class="col1">(3) Remark<br>
+       <i>(Stop the World Event)</i></td>
+       <td class="col2">
+       Finds objects that were missed by the concurrent mark phase due to updates by Java application threads to objects after the concurrent collector had finished tracing that object.
+       </td>
+     </tr>
+      <tr class="row">
+       <td class="col1">(4) Concurrent Sweep</td>
+       <td class="col2">
+       Collects the objects identified as unreachable during marking phases. The collection of a dead object adds the space for the object to a free list for later allocation. Coalescing of dead objects may occur at this point. Note that live objects are not moved.
+       </td>
+     </tr>
+      <tr class="row">
+       <td class="col1">(5) Resetting</td>
+       <td class="col2">Prepare for next concurrent collection by clearing data structures.
+       </td>
+     </tr>
+    </tbody>
+  </table>
+	</div>
+      <h4>Reviewing Garbage Collection Steps</h4>
+      <p>Next, let's review CMS Collector operations step by step.</p>
+    
+    <figure>
+      <figcaption>
+        <p><b>Heap Structure for CMS Collector</b></p>
+        <p>The heap is split into three spaces.</p>
+      </figcaption>    
+      <img src="./G1垃圾回收_files/Slide1(1).PNG" class="ScreenShot ImageSize" id="t40101">
+      <figcaption>
+        <p>Young generation is split into Eden and two survivor spaces. Old generation is one contiguous space. Object collection is done in place. No compaction is done unless there is a full GC.</p>
+      </figcaption>
+    </figure>
+
+
+     <figure>
+       <figcaption>
+        <p><b>How Young GC works in CMS</b></p>
+        <p>The young generation is colored light green and the old generation in blue. This is what the CMS might look like if your application has been running for a while. Objects are scattered around the old generation area.</p>
+       </figcaption>    
+        <img src="./G1垃圾回收_files/Slide2(1).PNG" class="ScreenShot ImageSize" id="t40102">
+       <figcaption>
+        <p>With CMS, old generation objects are deallocated in place. They are not moved around. The space is not compacted unless there is a full GC.</p>
+       </figcaption>    
+     </figure>
+
+
+
+     <figure>
+       <figcaption>
+        <p><b>Young Generation Collection</b></p>
+        <p>Live objects are copied from the Eden space and survivor space to the other survivor space. Any older objects that have reached their aging threshold are promoted to old generation.</p>
+       </figcaption>    
+        <img src="./G1垃圾回收_files/Slide3.PNG" class="ScreenShot ImageSize" id="t40103">
+     </figure>
+
+
+     <figure>
+       <figcaption>
+       <p><b>After Young GC</b></p>
+        <p>After a young GC, the Eden space is cleared and one of the survivor spaces is cleared.</p>
+       </figcaption>    
+        <img src="./G1垃圾回收_files/Slide4.PNG" class="ScreenShot ImageSize" id="t40104">
+       <figcaption>
+        <p>Newly promoted objects are shown in dark blue on the diagram. The green objects are surviving young generation objects that have not yet been promoted to old generation.</p>
+       </figcaption>    
+     </figure>
+
+
+     <figure>
+       <figcaption>
+        <p><b>Old Generation Collection with CMS</b></p>
+        <p>Two stop the world events take place: initial mark and remark. When the old generation reaches a certain occupancy rate, the CMS is kicked off. </p>
+       </figcaption>    
+        <img src="./G1垃圾回收_files/Slide5.PNG" class="ScreenShot ImageSize" id="t40105">
+       <figcaption>
+        <p>(1) Initial mark is a short pause phase where live (reachable) objects are marked. (2) Concurrent marking finds live objects while the application continues to execute. Finally, in the (3) remark phase, objects are found that were missed during (2) concurrent marking in the previous phase.</p>
+       </figcaption>    
+     </figure>
+
+
+     <figure>
+       <figcaption>
+        <p><b>Old Generation Collection - Concurrent Sweep</b></p>
+        <p>Objects that were not marked in the previous phase are deallocated in place. There is no  compaction.</p>
+       </figcaption>    
+        <img src="./G1垃圾回收_files/Slide6.PNG" class="ScreenShot ImageSize" id="t40106">
+       <figcaption>
+        <p><b>Note:</b> Unmarked objects == Dead Objects</p>
+       </figcaption>    
+     </figure>
+
+
+     <figure>
+       <figcaption>
+        <p><b>Old Generation Collection - After Sweeping</b></p>
+        <p>After the (4) Sweeping phase, you can see that a lot of memory has been freed up. You will also notice that no compaction has been done.
+        </p>
+       </figcaption>    
+        <img src="./G1垃圾回收_files/Slide7.PNG" class="ScreenShot ImageSize" id="t40107">
+       <figcaption>
+        <p>Finally, the CMS collector will move through the (5) resetting phase and wait for the next time the GC threshold is reached.</p>
+       </figcaption>    
+     </figure>
+
+
+
+   </ol></div>
+  </section>
+ 
+
+ <section>
+    <h2 id="t5">The G1 Garbage Collector Step by Step</h2>
+    <div><ol>
+      <h3>The G1 Garbage Collector Step by Step</h3>
+      <p>The G1 collector takes a different approach to allocating the heap. The pictures that follow review the G1 system step by step.</p>
+    
+    <figure>
+      <figcaption>
+        <p><b>G1 Heap Structure</b></p>
+        <p>The heap is one memory area split into many fixed sized regions.</p>
+      </figcaption>    
+      <img src="./G1垃圾回收_files/Slide8.PNG" class="ScreenShot ImageSize" id="t50101">
+      <figcaption>
+        <p>Region size is chosen by the JVM at startup. The JVM generally targets around 2000 regions varying in size from 1 to 32Mb.</p>
+      </figcaption>    
+    </figure>
+
+    <figure>
+      <figcaption>
+        <p><b>G1 Heap Allocation</b></p>
+        <p>In reality, these regions are mapped into logical representations of Eden, Survivor, and old generation spaces.</p>
+      </figcaption>    
+      <img src="./G1垃圾回收_files/Slide9.PNG" class="ScreenShot ImageSize" id="t50102">
+      <figcaption>
+        <p>The colors in the picture shows which region is associated with which role. Live objects are evacuated (i.e., copied or moved) from one region to another. Regions are designed to be collected in parallel with or without stopping all other application threads.</p>
+        <p>As shown regions can be allocated into Eden, survivor, and old generation regions. In addition, there is a fourth type of object known as Humongous regions. These regions are designed to hold objects that are 50% the size of a standard region or larger. They are stored as a set of  contiguous regions.  Finally the last type of regions would be the unused areas of the heap.</p>
+        <p><b>Note:</b> At the time of this writing, collecting humongous objects has not been optimized. Therefore, you should avoid creating objects of this size.
+        </p>
+      </figcaption>    
+    </figure>
+
+
+    <figure>
+      <figcaption>
+        <p><b>Young Generation in G1</b></p>
+        <p>The heap is split into approximately 2000 regions. Minimum size is 1Mb and maximum size is 32Mb. Blue regions hold old generation objects and green regions hold young generation objects.</p>
+      </figcaption>    
+      <img src="./G1垃圾回收_files/Slide10.PNG" class="ScreenShot ImageSize" id="t50103">
+      <figcaption>
+        <p>Note that the regions are not required to be contiguous like the older garbage collectors.</p>
+      </figcaption>    
+    </figure>
+
+
+    <figure>
+      <figcaption>
+        <p><b>A Young GC in G1</b></p>
+        <p>Live objects are evacuated (i.e., copied or moved) to one or more survivor regions.  If the aging threshold is met, some of the objects are promoted to old generation regions.</p>
+      </figcaption>    
+      <img src="./G1垃圾回收_files/Slide11.PNG" class="ScreenShot ImageSize" id="t50104">
+      <figcaption>
+        <p>This is a stop the world (STW) pause. Eden size and survivor size is calculated for the next young GC. Accounting information is kept to help calculate the size. Things like the pause time goal are taken into consideration.</p>
+        <p>This approach makes it very easy to resize regions, making them bigger or smaller as needed.
+        </p>
+      </figcaption>    
+    </figure>
+
+
+    <figure>
+      <figcaption>
+        <p><b>End of a Young GC with G1</b></p>
+        <p>Live objects have been evacuated to survivor regions or to old generation regions.</p>
+      </figcaption>    
+      <img src="./G1垃圾回收_files/Slide12.PNG" class="ScreenShot ImageSize" id="t50105">
+      <figcaption>
+        <p>Recently promoted objects are shown in dark blue. Survivor regions in green.</p>
+        <p>In summary, the following can be said about the young generation in G1:</p>
+        <ul>
+          <li>The heap is a single memory space split into regions.</li>
+          <li>Young generation memory is composed of a set of non-contiguous regions. This makes it easy to resize when needed.</li>
+          <li>Young generation garbage collections, or young GCs, are stop the world events. All application threads are stopped for the operation.</li>
+          <li>The young GC is done in parallel using multiple threads.</li>
+          <li>Live objects are copied to new survivor or old generation regions.</li>
+        </ul>
+      </figcaption>    
+    </figure>
+    
+    
+    <h3>Old Generation Collection with G1</h3>
+    <p>Like the CMS collector, the G1 collector is designed to be a low pause collector for old generation objects. The following table describes the G1 collection phases on old generation.</p>
+
+    	<div>
+  <style type="text/css">
+
+/* Two Column Table */
+#twoColThinTable { width:600px; border:1px solid #D9D5BE; border-collapse:collapse; margin:0px; background:white; font-size:0.9em; }
+#twoColThinTable td { padding:6px; }
+#twoColThinTable .titleRow { border-bottom: 1px solid #D9D5BE; font-weight:bold; font-size:1.1em; color:gray; text-align:center; }
+#twoColThinTable .row { border-bottom: 1px solid #D9D5BE; }
+#twoColThinTable .col1 { width:30%; text-align:center; vertical-align:top;}
+#twoColThinTable .col2 { width:70%; text-align:left; vertical-align:top;}
+#twoColThinTable .row:hover {background: #EDEDED;}
+  
+  </style>
+<!-- html table -->
+      <h4>G1 Collection Phases - Concurrent Marking Cycle Phases</h4>
+      <p>The G1 collector performs the following phases on the old generation of the heap. Note that some phases are part of a young generation collection.</p>
+  <table border="1px" id="twoColThinTable">
+    <thead>
+      <tr class="titleRow">
+        <td>Phase</td>
+        <td>Description</td>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="row">
+        <td class="col1">(1) Initial Mark<br>
+        <i>(Stop the World Event)</i></td>
+        <td class="col2">
+        This is a stop the world event. With G1, it is piggybacked on a normal young GC. Mark survivor regions (root regions) which may have references to objects in old generation.
+        </td>
+      </tr>
+      <tr class="row">
+       <td class="col1">(2) Root Region Scanning</td>
+       <td class="col2">
+       Scan survivor regions for references into the old generation. This happens while the application continues to run. The phase must be completed before a young GC can occur. 
+       </td>
+     </tr>
+      <tr class="row">
+       <td class="col1">(3) Concurrent Marking</td>
+       <td class="col2">
+       Find live objects over the entire heap. This happens while the application is running. This phase can be interrupted by young generation garbage collections.
+       </td>
+     </tr>
+      <tr class="row">
+       <td class="col1">(4) Remark<br>
+       <i>(Stop the World Event)</i></td>
+       <td class="col2">
+       Completes the marking of live object in the heap. Uses an algorithm called snapshot-at-the-beginning (SATB) which is much faster than what was used in the CMS collector. 
+       </td>
+     </tr>
+      <tr class="row">
+       <td class="col1">(5) Cleanup<br>
+       <i>(Stop the World Event and Concurrent)</i></td>
+       <td class="col2">
+       <ul>
+        <li>Performs accounting on live objects and completely free regions. (Stop the world)</li>
+        <li>Scrubs the Remembered Sets. (Stop the world)</li>
+        <li>Reset the empty regions and return them to the free list. (Concurrent)</li>
+       </ul>
+       </td>
+     </tr>
+     <tr class="row">
+      <td class="col1">(*) Copying<br>
+       <i>(Stop the World Event)</i></td>
+      <td class="col2">These are the stop the world pauses to evacuate or copy live objects to new unused regions. This can be done with young generation regions which are logged as <code>[GC pause (young)]</code>. Or both young and old generation regions which are logged as <code>[GC Pause (mixed)]</code>.</td>
+     </tr>
+    </tbody>
+  </table>
+	</div>
+	  <h4>G1 Old Generation Collection Step by Step</h4>
+	  <p>With the phases defined, let's look at how they interact with the old generation in the G1 collector.</p>
+    <figure>
+      <figcaption>
+        <p><b>Initial Marking Phase</b></p>
+        <p>Initial marking of live object is piggybacked on a young generation  garbage collection. In the logs this is noted as <code>GC pause (young)(inital-mark)</code>.</p>
+      </figcaption>    
+      <img src="./G1垃圾回收_files/Slide13.PNG" class="ScreenShot ImageSize" id="t50106">
+    </figure>
+    
+    
+
+    <figure>
+      <figcaption>
+        <p><b>Concurrent Marking Phase</b></p>
+        <p>If empty regions are found (as denoted by the "X"), they are removed immediately in the Remark phase. Also, "accounting" information that determines liveness is calculated.</p>
+      </figcaption>    
+      <img src="./G1垃圾回收_files/Slide14.PNG" class="ScreenShot ImageSize" id="t50107">
+      <figcaption>
+        <p></p>
+      </figcaption>    
+    </figure>
+
+
+    <figure>
+      <figcaption>
+       <p><b>Remark Phase</b></p>
+        <p>Empty regions are removed and reclaimed. Region liveness is now calculated for all regions.</p>
+      </figcaption>    
+      <img src="./G1垃圾回收_files/Slide15.PNG" class="ScreenShot ImageSize" id="t50108">
+      <figcaption>
+        <p></p>
+      </figcaption>    
+    </figure>
+
+
+    <figure>
+      <figcaption>
+        <p><b>Copying/Cleanup Phase</b></p>
+        <p>G1 selects the regions with the lowest "liveness", those regions which can be collected the fastest. Then those regions are collected at the same time as a young GC. This is denoted in the logs as <code>[GC pause (mixed)]</code>. So both young and old generations are collected at the same time.</p>
+      </figcaption>    
+      <img src="./G1垃圾回收_files/Slide16.PNG" class="ScreenShot ImageSize" id="t50109">
+    </figure>
+
+
+    <figure>
+      <figcaption>
+        <p><b>After Copying/Cleanup Phase</b></p>
+        <p>The regions selected have been collected and compacted into the dark blue region and the dark green region shown in the diagram.</p>
+      </figcaption>    
+      <img src="./G1垃圾回收_files/Slide17.PNG" class="ScreenShot ImageSize" id="t50110">
+    </figure>
+
+    <h4>Summary of Old Generation GC</h4>
+    <p>In summary, there are a few key points we can make about the G1 garbage collection on the old generation.
+    </p>
+    <ul>
+      <li>Concurrent Marking Phase</li>
+      <ul>
+        <li>Liveness information is calculated concurrently while the application is running.</li>
+        <li>This liveness information identifies which regions will be best to reclaim during an evacuation pause.</li> 
+        <li>There is no sweeping phase like in CMS.</li>
+      </ul>
+      <li>Remark Phase</li>
+      <ul>
+        <li>Uses the Snapshot-at-the-Beginning (SATB) algorithm which is much faster then what was used with CMS.</li>
+        <li>Completely empty regions are reclaimed.</li>
+      </ul>
+      <li>Copying/Cleanup Phase</li>
+      <ul>
+        <li>Young generation and old generation are reclaimed at the same time.</li>
+        <li>Old generation regions are selected based on their liveness.</li>
+      </ul>
+    </ul>
+
+
+
+
+   </ol></div>
+  </section>
+
+  
+ <section>
+    <h2 id="t6">Command Line Options and Best Practices</h2>
+    <div><ol>
+      <h3>Command Line Options and Best Practices</h3>
+      <p>In this section let's take a look at the various command line options for G1.</p>
+      
+      <h4>Basic Command Line</h4>
+      <p>To enable the G1 Collector use: <code>-XX:+UseG1GC</code></p>
+      <p>Here is a sample command line for starting the Java2Demo included in the JDK demos and samples download:<br>
+<b><code>java -Xmx50m -Xms50m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -jar c:\javademos\demo\jfc\Java2D\Java2demo.jar</code></b>
+</p>
+
+      <h4>Key Command Line Switches</h4>
+      <p><b><code>-XX:+UseG1GC</code></b> - Tells the JVM to use the G1 Garbage collector.
+      </p>
+      <p><b>-XX:MaxGCPauseMillis=200</b> - Sets a target for the maximum GC pause time. This is a soft goal, and the JVM will make its best effort to achieve it. Therefore, the pause time goal will sometimes not be met.
+      The default value is 200 milliseconds.</p>
+      <p><b>-XX:InitiatingHeapOccupancyPercent=45</b> - Percentage of the (entire) heap occupancy to start a concurrent GC cycle. It is used by G1 to trigger a concurrent GC cycle based on the occupancy of the entire heap, not just one of the generations. A value of 0 denotes 'do constant GC cycles'. The default value is 45 (i.e., 45% full or occupied).
+      </p>
+      
+      <h4>Best Practices</h4>
+      <p>There are a few best practices you should follow when using G1.</p>
+      <p><b>Do not Set Young Generation Size</b></p>
+      <p>Explicitly setting young generation size via <code>-Xmn</code> meddles with the default behavior of the G1 collector.</p>
+      <ul>
+        <li>G1 will no longer respect the pause time target for collections. So in essence, setting the young generation size disables the pause time goal.
+        </li>
+        <li>G1 is no longer able to expand and contract the young generation space as needed. Since the size is fixed, no changes can be made to the size.
+        </li>
+        
+      </ul>
+      <p><b>Response Time Metrics</b></p>
+      <p>Instead of using average response time (ART) as a metric to set the <code>XX:MaxGCPauseMillis=&lt;N&gt;</code>, consider setting value that will meet the goal 90% of the time or more. This means 90% of users making a request will not experience a response time higher than the goal. Remember, the pause time is a goal and is not guaranteed to always be met.
+      </p>
+
+      <p><b>What is an Evacuation Failure?</b></p>
+      <p>A promotion failure that happens when a JVM runs out of heap regions during the GC for either survivors and promoted objects. The heap can't expand because it is already at max. This is indicated in the GC logs when using <code>-XX:+PrintGCDetails</code> by <b><code>to-space overflow</code></b>. This is expensive!
+      </p>
+      <ul>
+        <li>GC still has to continue so space has to be freed up.</li>
+        <li>Unsuccessfully copied objects have to be tenured in place.</li>
+        <li>Any updates to RSets of regions in the CSet have to be regenerated.</li>
+        <li>All of these steps are expensive.</li>
+      </ul>
+      <p><b>How to avoid Evacuation Failure</b></p>
+      <p>To avoid evacuation failure, consider the following options.</p>
+      <ul>
+        <li>Increase heap size</li>
+        <ul>
+          <li>Increase the <b><code>-XX:G1ReservePercent=n</code></b>, the default is 10.</li>
+          <li>G1 creates a false ceiling by trying to leave the reserve memory free in case more 'to-space' is desired.</li>
+        </ul>
+        <li>Start the marking cycle earlier</li>
+        <li>Increase the number of marking threads using the <b><code>-XX:ConcGCThreads=n</code></b> option.</li>
+      </ul>
+
+  
+     
+  <div>
+  <style type="text/css">
+
+/* Two Column Table */
+#twoColThinTable { width:700px; border:1px solid #D9D5BE; border-collapse:collapse; margin:0px; background:white; font-size:0.9em; }
+#twoColThinTable td { padding:6px; }
+#twoColThinTable .titleRow { border-bottom: 1px solid #D9D5BE; font-weight:bold; font-size:1.1em; color:gray; text-align:center; }
+#twoColThinTable .row { border-bottom: 1px solid #D9D5BE; }
+#twoColThinTable .col1 { width:30%; text-align:left; vertical-align:top;}
+#twoColThinTable .col2 { width:70%; text-align:left; vertical-align:top;}
+#twoColThinTable .row:hover {background: #EDEDED;}
+  
+  </style>
+<!-- html table -->
+      <h4>Complete List of G1 GC Switches</h4>
+      <p>This is the complete list of G1 GC switches. Remember to use the best practices outlined above.</p>
+
+<table border="1px" id="twoColThinTable">
+<tbody>
+  <tr class="titleRow">
+    <th>Option and Default Value</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td class="col1">-XX:+UseG1GC</td>
+    <td class="col2">Use the Garbage First (G1) Collector</td>
+  </tr>
+  <tr>
+    <td class="col1">-XX:MaxGCPauseMillis=n</td>
+    <td class="col2">Sets a target for the maximum GC pause time. This is a soft goal, and the JVM will make its best effort to achieve it.</td>
+  </tr>
+  <tr>
+    <td class="col1">-XX:InitiatingHeapOccupancyPercent=n</td>
+    <td class="col2">Percentage of the (entire) heap occupancy to start a concurrent GC cycle. It is used by GCs that trigger a concurrent GC cycle based on the occupancy of the entire heap, not just one of the generations (e.g., G1). A value of 0 denotes 'do constant GC cycles'. The default value is 45.</td>
+  </tr>
+  <tr>
+    <td class="col1">-XX:NewRatio=n</td>
+    <td class="col2">Ratio of new/old generation sizes. The default value is 2.</td>
+  </tr>
+  <tr>
+    <td class="col1">-XX:SurvivorRatio=n</td>
+    <td class="col2">Ratio of eden/survivor space size. The default value is 8.</td>
+  </tr>
+  <tr>
+    <td class="col1">-XX:MaxTenuringThreshold=n</td>
+    <td class="col2">Maximum value for tenuring threshold. The default value is 15.</td>
+  </tr>
+  <tr>
+    <td class="col1">-XX:ParallelGCThreads=n</td>
+    <td class="col2">Sets the number of threads used during parallel phases of the garbage collectors. The default value varies with the platform on which the JVM is running.</td>
+  </tr>
+  <tr>
+    <td class="col1">-XX:ConcGCThreads=n</td>
+    <td class="col2">Number of threads concurrent garbage collectors will use. The default value varies with the platform on which the JVM is running.</td>
+  </tr>
+  <tr>
+    <td class="col1">-XX:G1ReservePercent=n</td>
+    <td class="col2">Sets the amount of heap that is reserved as a false ceiling to reduce the possibility of promotion failure. The default value is 10.</td>
+  </tr>
+  <tr>
+    <td class="col1">-XX:G1HeapRegionSize=n</td>
+    <td class="col2">With G1 the Java heap is subdivided into uniformly sized regions. This sets the size of the individual sub-divisions. The default value of this parameter is determined ergonomically based upon heap size. The minimum value is 1Mb and the maximum value is 32Mb.</td>
+  </tr>
+</tbody>
+</table>
+
+   </div></ol></div>
+  </section>
+  
+  
+  <section class="NoNumbers">
+    <h2 id="t7">Logging GC with G1</h2>
+    <div><ol>
+    <h3>Logging GC with G1</h3>   
+    <p>The final topic we need to cover is using logging information to analyze performance with the G1 collector. This section provides a quick overview of the switches you can use to collect data and the information that is printed in the logs.
+    </p>
+    
+    <h4>Setting the Log Detail</h4>
+    <p>You can set the detail to three different levels of detail.</p>
+    
+    <p><b>(1) <code>-verbosegc</code></b> (which is equivalent to <b><code>-XX:+PrintGC</code></b>) sets the detail level of the log to <i>fine</i>.</p> 
+    <p><b>Sample Output</b></p>
+<pre>[GC pause (G1 Humongous Allocation) (young) (initial-mark) 24M- &gt;21M(64M), 0.2349730 secs]
+[GC pause (G1 Evacuation Pause) (mixed) 66M-&gt;21M(236M), 0.1625268 secs]    
+</pre>
+
+    <p><b>(2) <code>-XX:+PrintGCDetails</code></b> sets the detail level to <i>finer</i>. The options shows the following information:</p>
+    <ul>
+      <li>Average, Min, and Max time are displayed for each phase.</li>
+      <li>Root Scan, RSet Updating (with processed buffers information), RSet Scan, Object Copy, Termination (with number of attempts).</li>
+      <li>Also shows “other” time such as time spent choosing CSet, reference processing, reference enqueuing and freeing CSet.</li>
+      <li>Shows the Eden, Survivors and Total Heap occupancies.</li>
+    </ul>
+
+    <p><b>Sample Output</b></p>
+<pre>[Ext Root Scanning (ms): Avg: 1.7 Min: 0.0 Max: 3.7 Diff: 3.7]
+[Eden: 818M(818M)-&gt;0B(714M) Survivors: 0B-&gt;104M Heap: 836M(4096M)-&gt;409M(4096M)]
+</pre>
+
+    <p><b>(3) <code>-XX:+UnlockExperimentalVMOptions -XX:G1LogLevel=finest</code></b> sets the detail level to its <i>finest</i>. Like finer but includes individual worker thread information.</p>
+<pre>[Ext Root Scanning (ms): 2.1 2.4 2.0 0.0
+           Avg: 1.6 Min: 0.0 Max: 2.4 Diff: 2.3]
+       [Update RS (ms):  0.4  0.2  0.4  0.0
+           Avg: 0.2 Min: 0.0 Max: 0.4 Diff: 0.4]
+           [Processed Buffers : 5 1 10 0
+           Sum: 16, Avg: 4, Min: 0, Max: 10, Diff: 10]
+</pre>
+
+    
+    <h4>Determining Time</h4>
+    <p>A couple of switches determine how time is displayed in the GC log.</p>
+    
+    <p><b>(1) <code>-XX:+PrintGCTimeStamps</code></b> - Shows the elapsed time since the JVM started.</p>
+    <p><b>Sample Output</b></p>
+<pre>    1.729: [GC pause (young) 46M-&gt;35M(1332M), 0.0310029 secs]</pre>
+
+    <p><b>(2) <code>-XX:+PrintGCDateStamps</code></b> - Adds a time of day prefix to each entry.</p>
+<pre>    2012-05-02T11:16:32.057+0200: [GC pause (young) 46M-&gt;35M(1332M), 0.0317225 secs]
+</pre>
+
+     
+     
+     
+     <h4>Understanding G1 Log</h4>
+     <p>To understand the log, this section defines a number of terms using actual GC log output. The following examples show output from the log with explanations of the terms and values you will find in it.
+     </p>
+     <p><b>Note:</b> For more information check out <a href="https://blogs.oracle.com/poonam/entry/understanding_g1_gc_logs">Poonam Bajaj's Blog post on G1 GC logs</a>.</p>
+     
+     <h4>G1 Logging Terms Index</h4>
+     <p>
+     <a href="https://www.oracle.com/technetwork/tutorials/tutorials-1876574.html#ClearCT">Clear CT</a><br>
+     <a href="https://www.oracle.com/technetwork/tutorials/tutorials-1876574.html#CSet">CSet</a><br>
+     <a href="https://www.oracle.com/technetwork/tutorials/tutorials-1876574.html#ExternalRootScanning">External Root Scanning</a><br>
+     <a href="https://www.oracle.com/technetwork/tutorials/tutorials-1876574.html#FreeCSet">Free CSet</a><br>
+     <a href="https://www.oracle.com/technetwork/tutorials/tutorials-1876574.html#GCWorkerEnd">GC Worker End</a><br>
+     <a href="https://www.oracle.com/technetwork/tutorials/tutorials-1876574.html#GCWorkerOther">GC Worker Other</a><br>
+     <a href="https://www.oracle.com/technetwork/tutorials/tutorials-1876574.html#ObjectCopy">Object Copy</a><br>
+     <a href="https://www.oracle.com/technetwork/tutorials/tutorials-1876574.html#Other">Other</a><br>
+     <a href="https://www.oracle.com/technetwork/tutorials/tutorials-1876574.html#ParallelTime">Parallel Time</a><br>
+     <a href="https://www.oracle.com/technetwork/tutorials/tutorials-1876574.html#RefEng">Ref Eng</a><br>
+     <a href="https://www.oracle.com/technetwork/tutorials/tutorials-1876574.html#RefProc">Ref Proc</a><br>
+     <a href="https://www.oracle.com/technetwork/tutorials/tutorials-1876574.html#ScanningRememberedSets">Scanning Remembered Sets</a><br>
+     <a href="https://www.oracle.com/technetwork/tutorials/tutorials-1876574.html#TerminationTime">Termination Time</a><br>
+     <a href="https://www.oracle.com/technetwork/tutorials/tutorials-1876574.html#UpdateRememberedSet">Update Remembered Set</a><br>
+     <a href="https://www.oracle.com/technetwork/tutorials/tutorials-1876574.html#ParallelTime">Worker Start</a><br>
+     </p>
+
+     <a name="ParallelTime"></a>
+     <p><b>Parallel Time</b></p>
+<pre>414.557: [GC pause (young), 0.03039600 secs] [<em>Parallel Time</em>: 22.9 ms]
+[GC <em>Worker Start</em> (ms): 7096.0 7096.0 7096.1 7096.1 706.1 7096.1 7096.1 7096.1 7096.2 7096.2 7096.2 7096.2
+       Avg: 7096.1, Min: 7096.0, Max: 7096.2, Diff: 0.2]
+</pre>
+<p><em>Parallel Time</em> – Overall elapsed time of the main parallel part of the pause<br>
+<em>Worker Start</em> – Timestamp at which the workers start<br>
+<b>Note:</b> The logs are ordered on thread id and are consistent on each entry
+</p>
+
+<a name="ExternalRootScanning"></a>
+<p><b>External Root Scanning</b></p>
+<pre>[<em>Ext Root Scanning</em> (ms): 3.1 3.4 3.4 3.0 4.2 2.0 3.6 3.2 3.4 7.7 3.7 4.4
+     Avg: 3.8, Min: 2.0, Max: 7.7, Diff: 5.7]
+</pre>
+<p><em>External root scanning</em> - The time taken to scan the external root (e.g.,  things like system dictionary that point into the heap.)</p>
+
+<a name="UpdateRememberedSet"></a>
+<p><b>Update Remembered Set</b></p>
+<pre>[<em>Update RS</em> (ms): 0.1 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 Avg: 0.0, Min: 0.0, Max: 0.1, Diff: 0.1]
+   [Processed Buffers : 26 0 0 0 0 0 0 0 0 0 0 0
+    Sum: 26, Avg: 2, Min: 0, Max: 26, Diff: 26]
+</pre>
+<p><em>Update Remembered Set</em> - Any buffers that are completed but have not yet been processed by the concurrent refinement thread before the start of the
+pause have to be updated. Time depends on density of the cards. The more cards, the longer it will take.
+</p>
+
+<a name="ScanningRememberedSets"></a>
+<p><b>Scanning Remembered Sets</b></p>
+<pre>[<em>Scan RS</em> (ms): 0.4 0.2 0.1 0.3 0.0 0.0 0.1 0.2 0.0 0.1 0.0 0.0 Avg: 0.1, Min: 0.0, Max: 0.4, Diff: 0.3]F</pre>
+<p><em>Scanning Remembered Sets</em> - Look for pointers that point into the Collection Set.</p>
+
+<a name="ObjectCopy"></a>
+<p><b>Object Copy</b></p>
+<pre>[<em>Object Copy</em> (ms): 16.7 16.7 16.7 16.9 16.0 18.1 16.5 16.8 16.7 12.3 16.4 15.7 Avg: 16.3, Min: 12.3, Max:  18.1, Diff: 5.8]
+</pre>
+<p><em>Object copy</em> – The time that each individual thread spent copying and evacuating objects.</p>
+
+<a name="TerminationTime"></a>
+<p><b>Termination Time</b></p>
+<pre>[<em>Termination</em> (ms): 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+0.0 Avg: 0.0, Min: 0.0, Max: 0.0, Diff: 0.0] [Termination Attempts : 1 1 1 1 1 1 1 1 1 1 1 1 Sum: 12, Avg: 1, Min: 1, Max: 1, Diff: 0]</pre>
+<p><em>Termination time</em> - When a worker thread is finished with its particular set of objects to copy and scan, it enters the termination protocol. It looks for work to steal and once it's done with that work it again enters the termination protocol. Termination attempt counts all the attempts to steal work. </p>
+
+<a name="GCWorkerEnd"></a>
+<p><b>GC Worker End</b></p>
+<pre>[<em>GC Worker End</em> (ms): 7116.4 7116.3 7116.4 7116.3 7116.4 7116.3 7116.4 7116.4 7116.4 7116.4 7116.3 7116.3
+    Avg: 7116.4, Min: 7116.3, Max: 7116.4, Diff:   0.1]
+[<em>GC Worker</em> (ms): 20.4 20.3 20.3 20.2 20.3 20.2 20.2 20.2 20.3 20.2 20.1 20.1
+     Avg: 20.2, Min: 20.1, Max: 20.4, Diff: 0.3]</pre>
+<p><em>GC worker end time</em> – Timestamp when the individual GC worker stops.</p>
+<p><em>GC worker time</em> – Time taken by individual GC worker thread.</p>
+
+<a name="GCWorkerOther"></a>
+<p><b>GC Worker Other</b></p>
+<pre>[<em>GC Worker Other</em> (ms): 2.6 2.6 2.7 2.7 2.7 2.7 2.7 2.8 2.8 2.8 2.8 2.8
+    Avg: 2.7, Min: 2.6, Max: 2.8, Diff: 0.2]</pre>
+<p><em>GC worker other</em> – The time (for each GC thread) that can't be attributed to the worker phases listed previously. Should be quite low. In the past, we have seen excessively high values and they have been attributed to bottlenecks in other parts of the JVM (e.g., increases in the Code Cache occupancy with Tiered).
+</p>
+
+<a name="ClearCT"></a>
+<p><b>Clear CT</b></p>
+<pre>[<em>Clear CT</em>: 0.6 ms]</pre>
+<p>Time taken to clear the card table of RSet scanning meta-data 
+
+<a name="Other"></a>
+</p><p><b>Other</b></p>
+<pre>[<em>Other</em>: 6.8 ms]</pre>
+<p>Time taken for various other sequential phases of the GC pause.</p>
+
+<a name="CSet"></a>
+<p><b>CSet</b></p>      
+<pre>[Choose <em>CSet</em>: 0.1 ms]</pre>
+<p>Time taken finalizing the set of regions to collect. Usually very small; slightly longer when having to select old.</p>
+
+<a name="RefProc"></a>
+<p><b>Ref Proc</b></p>      
+<pre>[<em>Ref Proc</em>: 4.4 ms]</pre>
+<p>Time spent processing soft, weak, etc. references deferred from the prior phases of the GC.</p>
+
+<a name="RefEng"></a>
+<p><b>Ref Enq</b></p>      
+<pre>[<em>Ref Enq</em>: 0.1 ms]</pre>
+<p>Time spent placing soft, weak, etc. references on to the pending list.</p>
+      
+<a name="FreeCSet"></a>
+<p><b>Free CSet</b></p>      
+<pre>[<em>Free CSet</em>: 2.0 ms]</pre>
+<p>Time spent freeing the set of regions that have just been collected, including their remembered sets.</p>
+
+    
+   </ol></div>
+  </section>
+
+ 
+ <!-- Summary Section -->
+ <section>
+  <h2 id="summary">Summary</h2>
+  <div><ol>
+   <p>In this OBE, you have been given an overview of the G1 garbage collector included in the Java JVM. First you learned how the Heap and the Garbage Collector are key parts of any Java JVM. Next your reviewed how garbage collection works using the CMS collector and the G1 collector. Next you learned about the G1 command line switches and the best practices for using them. Finally, you learned about logging object and data included in the GC logs.</p>
+   <p>In this tutorial, you have learned: </p>
+   <ul>
+    <li>The components of the Java JVM</li>
+    <li>An overview of the G1 Collector</li>
+    <li>A review of the CMS collector</li>
+    <li>A review of the G1 collector</li>
+    <li>Command line switches and best practices</li>
+    <li>Logging with G1</li>
+   </ul>
+   <h4>Resources</h4>
+<p>For more information and related information please see these site and links.</p>
+  <ul>
+    <li><a href="http://www.oracle.com/technetwork/java/javase/tech/vmoptions-jsp-140102.html">Java HotSpot VM Options</a></li>
+    <li><a href="http://www.oracle.com/technetwork/java/javase/tech/g1-intro-jsp-135488.html">The Garbage First(G1) Garbage Collector</a></li>
+    <li><a href="https://blogs.oracle.com/poonam/entry/understanding_g1_gc_logs">Poonam Bajaj G1 GC Blog Post</a></li>
+    <li><a href="http://education.oracle.com/pls/web_prod-plq-dad/db_pages.getpage?page_id=609&amp;p_org_id=1001&amp;lang=US&amp;get_params=dc:D67232GC10,p_preview:N">Java SE 7: Develop Rich Client Applications</a></li>
+    <li><a href="http://www.amazon.com/Java-Performance-Charlie-Hunt/dp/0137142528/ref=sr_1_1">Java Performance - Charlie Hunt and Binu John</a></li>
+    <li><a href="http://www.oracle.com/oll">Oracle Learning Library</a></li>
+   </ul>
+   <h4>Credits</h4>
+    <ul>
+      <li>Curriculum Developer: Michael J Williams</li>
+      <li>QA: Krishnanjani Chitta</li>
+    </ul>
+  </ol></div>
+ </section> 
+</div> <!-- container --> 
+<div id="dialog-help" title="Help">
+  <p>To help navigate this Oracle by Example, note the following:
+  </p><dl>
+    <dt>Hiding Header Buttons:</dt><dd>Click the Title to hide the buttons in the header. To show the buttons again, simply click the Title again.</dd>
+    <dt>Topic List Button:</dt><dd>A list of all the topics. Click one of the topics to navigate to that section.</dd>
+    <dt>Expand/Collapse All Topics:</dt><dd>To show/hide all the detail for all the sections. By default, all topics are collapsed</dd>
+    <dt>Show/Hide All Images:</dt><dd>To show/hide all the screenshots. By default, all images are displayed.</dd>
+    <dt>Print:</dt><dd>To print the content. The content currently displayed or hidden will be printed.</dd>
+  </dl>
+  <p></p>
+</div>
+<div id="dialog" title="Topic List">
+  <p>To navigate to a particular section in this tutorial, select the topic from the list.</p>
+  <ul>
+  </ul>
+</div>
+<footer>
+<nav>
+<a class="help" href="https://www.oracle.com/technetwork/tutorials/tutorials-1876574.html#"> Help</a><a href="http://www.oracle.com/goto/oll"> OLL</a><a href="http://www.oracle.com/us/corporate/index.html" onclick="navTrack(&#39;otn&#39;,&#39;en&#39;,&#39;footer&#39;,&#39;about oracle&#39;);" class="footerLinks"> About Oracle</a><a href="http://apex.oracle.com/pls/apex/f?p=44785:34:0" onclick="navTrack(&#39;otn&#39;,&#39;en&#39;,&#39;footer&#39;,&#39;contact us&#39;);" class="footerLinks"> Contact Us</a><a href="http://www.oracle.com/us/legal/terms/index.html" onclick="navTrack(&#39;otn&#39;,&#39;en&#39;,&#39;footer&#39;,&#39;terms of use&#39;);" class="footerLinks"> Terms of Use</a></nav>
+</footer>
+</article>
+<noscript><img src="https://www.oracle.com/akam/11/pixel_5e70bc27?a=dD02ZDc4MjFmYjhjMDE4YzkzOWI0NmI3NzBjNWE1MTEwZDQyNmVlN2UxJmpzPW9mZg==" style="visibility: hidden; position: absolute; left: -999px; top: -999px;" /></noscript>
+
+<div id="chrome_websiteIP" class="chrome_websiteIP_right">23.36.96.18</div></body></html>

@@ -57,9 +57,12 @@ MiniorGC, MajorGC, FullGC, MixedGC
 
 
 垃圾回收算法：
-标记-清除 Mark-Sweep
-复制 Copy
-标记-整理 Mark-Compact
+- 标记清除 Mark-Sweep
+- 复制 Copy
+- 标记压缩 Mark-Compact
+
+
+
 
 ### GC Root类型
 Stack使用的：Local variable 本地变量, Static variables静态变量，JNI references
@@ -104,13 +107,37 @@ Wilson于1994年在理论上证明了，当且仅当以下两个条件同时满�
         增量更新（Incremental Update）
         原始快照（Snapshot At The Beginning，SATB）。
 
-Hotspot垃圾回收器类型：
+# Hotspot垃圾回收器类型：
 young: SerialNew, ParNew, ParaScavenge
 old: SerialOld, ParOld, CMS
 yong & old: G1 
 
 
-CMS：初始标记GCRoot（stop-the-world) -> 并发标记 -> 重新标记(stop-the-world) -> 并发清除
-G1：基于Region（可预测的停顿时间模型）
-Shenandoah: 基于Rregion，跨代引用保存在ConnectionMatrix（对标RememberedSet）, ForwardingPointer转发指针+Read Barrier读屏障
-ZenGC：基于Region，Colored Pointer染色指针
+- CMS：初始标记GCRoot（stop-the-world) -> 并发标记 -> 重新标记(stop-the-world) -> 并发清除
+
+- G1：基于Region（可预测的停顿时间模型）
+
+- Shenandoah: 基于Rregion，跨代引用保存在ConnectionMatrix（对标RememberedSet）, ForwardingPointer转发指针+Read Barrier读屏障
+
+- ZenGC：基于Region，Colored Pointer染色指针
+
+# G1垃圾回收
+https://www.oracle.com/technetwork/tutorials/tutorials-1876574.html
+
+In summary, there are a few key points we can make about the G1 garbage collection on the old generation.
+
+1. Concurrent Marking Phase
+    - Liveness information is calculated concurrently while the application is running.
+    - This liveness information identifies which regions will be best to reclaim during an evacuation pause.
+    - There is no sweeping phase like in CMS.
+
+2. Remark Phase
+    - Uses the Snapshot-at-the-Beginning (SATB) algorithm which is much faster then what was used with CMS.
+    - Completely empty regions are reclaimed.
+
+3. Copying/Cleanup Phase
+    - Young generation and old generation are reclaimed at the same time.
+    - Old generation regions are selected based on their liveness.
+
+# ZGC 垃圾回收
+

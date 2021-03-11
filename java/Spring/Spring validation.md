@@ -116,11 +116,32 @@ public class IntegrationTest {
 前者用来生成和植入拦截器MethodValidationInterceptor，调用方法时自动拦截；
 后者生成Validator，这样我们通过autowire即可获得Validator，手工调用。
 
+
+不过有时候autoconfig由于一些原因没起作用，我们可以手工来设置validator
+```Java
+@Configuration
+public class CommonConfig {
+    @Bean
+    public Validator validator() {
+        //org.hibernate.validator.internal.engine.ValidatorImpl
+        return Validation.byProvider(HibernateValidator.class)
+            .configure()
+            .buildValidatorFactory()
+            .getValidator();
+    }
+
+}
+
+```
+
 # 类图
 
 ![Validation Classes.jpg](spring-validation-images/classes.jpg)
 
 # 初始化拦截器和Bean
+基于spring boot autoconfig机制，从ValidationAutoConfiguration开始初始化：
+- 生成validator的工厂bean: LocalValidatorFactoryBean
+- 生成方法拦截切面，并注入对validator的引用: MethodValidationPostProcessor
 
 ![Validation初始化.jpg](spring-validation-images/init.jpg)
 
@@ -128,3 +149,33 @@ public class IntegrationTest {
 # 调用方法自动拦截进行校验
 
 ![Validation调用.jpg](spring-validation-images/validation.jpg)
+
+
+# 避坑指南
+
+## 引入fast-validator会导致hibernate-validator验证失效：
+
+原因：validation-api中的Validation， 是用SPI机制发现和加载ValidationProvider实现类的：
+ServiceLoader.load( ValidationProvider.class, classloader )
+
+由于引入了两个jar包（fast-validator, hibernate-validator） 提供了2个ValidationProvider实现，那么按Validation默认逻辑，只会get(0)获取第一个。
+
+![SPI加载ValidationProvider](spring-validation-images/spi-load.png)
+![SPI解析ValidationProvider](spring-validation-images/spi-load-resolve.png)
+
+- 解法1：去掉一个包，避免引入多个validator实现类（比如hibernate-validator，fast-validator）。
+
+- 解法2：手工指定ValidationProvider实现类
+```Java
+@Configuration
+public class CommonConfig {
+    @Bean
+    public Validator validator() {
+        return Validation.byProvider(HibernateValidator.class)
+            .configure()
+            .buildValidatorFactory()
+            .getValidator();
+    }
+
+}
+```
