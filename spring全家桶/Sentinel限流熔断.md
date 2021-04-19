@@ -1,5 +1,7 @@
 https://github.com/alibaba/Sentinel/wiki/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8
 
+https://juejin.cn/post/6844903749706579975
+
 
 
 核心类：
@@ -88,3 +90,8 @@ RateLimiterController
 
 
 ## 根据调用方限流
+
+
+## 分布式限流怎么实现？
+维护一个集中计数器？
+

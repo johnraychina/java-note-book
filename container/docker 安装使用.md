@@ -54,52 +54,30 @@ docker image --help 又可以看到对镜像的操作，非常简明直观。
   volume      Manage volumes
 
 
-### 构建
+### 构建 docker build 
 
-FROM 基于基础镜像构建
-WORKDIR 工作目录
-COPY 拷贝
-RUN 运行
-ENV 环境
-ENTRYPOINT 入口
+Dockerfile:
+- FROM 基于基础镜像构建
+- WORKDIR 工作目录
+- COPY 拷贝
+- RUN 运行
+- ENV 环境
+- ENTRYPOINT 入口
 
-### 打标
+### 执行 docker run 
+1. Bind volumes: -v hostPath:containerPath
+
+2. Bind ports:  -p hostPort:containerPort
+127.0.0.1 仅本机能访问
+0.0.0.1 外部可访问
+
+3. Environment variable: --env PGUSER=pg-admin
+
+4. Build-time arguments: --build-arg KEY=VALUE
 
 ### 上传
 
 
-### 持久化和挂载
-
-#### named volume 
-1. 创建  docker volume create todo-db
-2. 挂载  docker run -dp 3000:3000 -v todo-db:/etc/todos getting-started
-3. 查看  docker volume inspect todo-db
-[
-    {
-        "CreatedAt": "2019-09-26T02:18:36Z",
-        "Driver": "local",
-        "Labels": {},
-        "Mountpoint": "/var/lib/docker/volumes/todo-db/_data",
-        "Name": "todo-db",
-        "Options": {},
-        "Scope": "local"
-    }
-]
-注意：While running in Docker Desktop, the Docker commands are actually running inside a small VM on your machine. If you wanted to look at the actual contents of the Mountpoint directory, you would need to first get inside of the VM.
-
-
-### use bind mounts
-named volume: 你控制不了数据存在哪里
-bind mounts: 你可以控制挂载点
-使用场景：代码动态加载、通信等
-
-https://docs.docker.com/get-started/06_bind_mounts/
-```shell
- docker run -dp 3000:3000 \
-     -w /app -v "$(pwd):/app" \
-     node:12-alpine \
-     sh -c "yarn install && yarn run dev"
-```
 
 ### 多容器app
 

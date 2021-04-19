@@ -84,7 +84,7 @@ https://zookeeper.apache.org/doc/r3.6.2/zookeeperInternals.html
 
 ## 消息广播
 2PC提交：
-zookeeper使用单一的leader来接收和处理客户端的所有事物请求，
+zookeeper使用单一的leader来接收和处理客户端的所有事务请求，
 并采用ZAB协议的原子广播协议，将事物请求以proposal广播给所有followers，
 leader收到过半ACK反馈时，leader再次将commit消息发给followers。
 
