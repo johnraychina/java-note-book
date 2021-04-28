@@ -174,6 +174,3 @@ A socket is an endpoint for communication between two machines.
 基于Java NIO，实现了更好的编程模型，简化socket的繁琐操作。
 EventLoop事件机制，异步编程。
 
-
-
-
