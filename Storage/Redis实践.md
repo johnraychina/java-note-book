@@ -7,6 +7,7 @@
 https://redis.io/commands
 https://www.runoob.com/redis/redis-tutorial.html
 
+5种基本数据结构
 - string
 - list
 - hash
@@ -27,12 +28,13 @@ pfadd key val1 val2
 
 ### Bloom Filter 布隆过滤器
 
-
 pfcount key
+
 ### 发布订阅
 subscribe channel
 publish channel
 unsubscribe channel
+
 ### 事务
 MULTI 监视一个(或多个) key ，如果在事务执行之前这个(或这些) key 被其他命令所改动，那么事务将被打断。
 EXEC 执行所有事务块内的命令。

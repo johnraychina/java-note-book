@@ -34,7 +34,11 @@ containerRouter.postContainersStart
 如果 Docker 的容器通过 Linux 的命名空间完成了与宿主机进程的网络隔离，但是却又没有办法通过宿主机的网络与整个互联网相连，就会产生很多限制，所以 Docker 虽然可以通过命名空间创建一个隔离的网络环境，但是 Docker 中的服务仍然需要与外界相连才能发挥作用。
 
 
-每一个使用 docker run 启动的容器其实都具有单独的网络命名空间，Docker 为我们提供了四种不同的网络模式，Host、Container、None 和 Bridge 模式。
+每一个使用 docker run 启动的容器其实都具有单独的网络命名空间，Docker 为我们提供了四种不同的网络模式：
+- Host
+- Container
+- None
+- Bridge 模式。
 
 [Bridge桥接模式](docker-network-topology.png)
 
@@ -42,7 +46,7 @@ containerRouter.postContainersStart
 ### libnetwork
 todo
 
-## 挂载点
+## 挂载点 -v
 
 ### chroot
 todo
@@ -60,6 +64,7 @@ docker 中的每一个镜像都是由一系列只读的层组成的，Dockerfile
 
 docker镜像分层构建，容器之间共用。
 联合文件系统: aufs、devicemapper、overlay2、zfs 和 vfs 等.
+Docker目前推荐和默认的是overlay2。
 参见[Storage Driver](https://docs.docker.com/storage/storagedriver/select-storage-driver/).
 
 ## AUFS
@@ -67,6 +72,12 @@ UnionFS 其实是一种为 Linux 操作系统设计的用于把多个文件系�
 而 AUFS 即 Advanced UnionFS 其实就是 UnionFS 的升级版，它能够提供更优秀的性能和效率。
 
 AUFS 作为联合文件系统，它能够将不同文件夹中的层联合（Union）到了同一个文件夹中，这些文件夹在 AUFS 中称作分支，整个『联合』的过程被称为联合挂载（Union Mount）。
+
+## 容器格式
+最初docker采用了LXC中的容器格式   
+从0.7版本以后就开始去除LXC，转而使用自行研发的libcontainer。   
+从1.11开始，进一步演进为使用 runC 和 containerd.
+
 
 
 # 参考文档

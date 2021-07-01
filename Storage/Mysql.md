@@ -71,13 +71,13 @@ redo log 是物理日志，记录的是“在某个数据页上做了什么修�
 ## change buffer
 
 
-## mysql多版本管理 undolog
+## MVCC 多版本管理 undolog
 https://time.geekbang.org/column/article/68963
 https://blog.jcole.us/2014/04/16/the-basics-of-the-innodb-undo-logging-and-history-system/
 https://dev.mysql.com/doc/refman/8.0/en/innodb-multi-versioning.html
 
 
-mysql使用 roll back segment(undolog ) 记录被修改数据的老版本
+mysql使用 roll back segment(undolog) 记录被修改数据的老版本
 一方面用于事务回滚
 一方面用于事务隔离
 

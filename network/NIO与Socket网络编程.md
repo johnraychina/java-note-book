@@ -16,7 +16,7 @@ server端如果用BIO模型，则必须每个连接分配一个线程处理。
 
 ## C10M 问题 todo
 youtube: C10M Defending The Internet At Scale, Robert David Graham
-
+作者分析了网络调用，发现问题不在于IO模型，而是Linux系统的宏内核调用太长了。
 
 ## 操作系统Socket
 操作系统把对网络的操作封装为socket, 应用通过socket系统调用完成网络操作，所以有一些书名叫“socket编程”。
@@ -36,15 +36,13 @@ client socket:
 
 
 ### 操作系统提供的IO模型：
-- recvfrom 支持阻塞式IO、非阻塞式
+《Unix网络编程》5种IO模型：阻塞IO > 非阻塞IO > 多路复用IO > 信号驱动IO > 异步IO
 
-IO多路复用
 - select 同步的IO多路复用，对IO file descriptor(fd)进行遍历检查：是否读就绪，写就绪 或者异常。select中的fd是用数组实现的，有长度限制。
 - poll 和select差不多，同步的IO多路复用，主要是将fd数组改为链表，解决了长度问题。     
 - epoll 事件驱动，红黑树的结构保存fd句柄，以支持快速的查找、插入、删除
-
-- async io 异步io
 - signal 信号驱动
+- async io 异步io
 
 socket IO实际分2个阶段：
 - 等待数据(检查是否有数据)
@@ -52,6 +50,7 @@ socket IO实际分2个阶段：
 socket IO模型中的<b>阻塞</b>是指第一阶段等待数据，第二阶段很快而且是必须等待的（除非用直接内存访问DirectBuffer)
 
 select/poll/epoll模型可以将第一阶段【等待数据】 变为 【轮询检查是否有数据，立即返回读/写就绪的fd】
+
 异步则是好莱坞原则（don't call me, I'll call you)，应用把<event type, event handler>注册到socket, 当有你关心的事件来的时候，操作系统会来call事件处理器。
 
 #### epoll介绍

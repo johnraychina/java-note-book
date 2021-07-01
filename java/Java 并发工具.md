@@ -95,7 +95,10 @@ while(条件不满足) {
 }
 
 # FutureTask
+通过volatile的 state 来管理状态
 
+get 阻塞实现方式：awaitDone 中for循环 通过等待队列weakCompareAndSet + LockSupport实现等待
+set compareAndSet来实现设置值
 
 # 底层：基于AQS(AbstractQueuedSynchronizer)实现
 https://tech.meituan.com/2019/12/05/aqs-theory-and-apply.html
